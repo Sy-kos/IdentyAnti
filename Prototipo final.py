@@ -107,12 +107,22 @@ if archivo is not None:
     datos = datos.rename(index={i:f"Célula {i+1}" for i in range(len(datos))})
 
     usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
+
+    # Definir columnas a convertir
     columnas_a_convertir = ANTIGENOS_TODOS+[COLUMNA_PACIENTE]
     if usar_enzimas:
-        columnas_a_convertir.append(COLUMNA_ENZIMA)
-    columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
+    columnas_a_convertir.append(COLUMNA_ENZIMA)
+
+    # Solo conservar columnas que tengan al menos un resultado distinto de cero
+    columnas_validas = [
+    col for col in columnas_a_convertir
+    if col in datos.columns and datos[col].notna().any() and (datos[col] != 0).any()
+ ]
+
+    # Convertir solo esas columnas
     datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
+    # Resultados del paciente y enzimas
     resultados_paciente = datos[COLUMNA_PACIENTE]
     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
 

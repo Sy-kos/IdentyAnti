@@ -144,20 +144,18 @@ for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA:
         pareja = PAREJAS_CIGOTICAS.get(ant)
         if pareja and pareja in datos.columns:
-            # Descarte solo si es homocigoto (ant=1, pareja=0) en células negativas
             celulas_homo_neg = datos[(datos[ant]==1) & (datos[pareja]==0) & (resultados_paciente==0)]
             if not celulas_homo_neg.empty:
                 antigenos_descartados.add(ant)
         else:
-            # Si no tiene pareja, descarta igual si aparece en negativos
             if (celulas_negativas[ant] == 1).any():
                 antigenos_descartados.add(ant)
 
-    candidatos_no_descartados = [
-        ant for ant in ANTIGENOS_TODOS
-        if ant in datos.columns and ant not in antigenos_descartados
-        and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
-    ]
+candidatos_no_descartados = [
+    ant for ant in ANTIGENOS_TODOS
+    if ant in datos.columns and ant not in antigenos_descartados
+    and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
+]
 
     # Paso 1: único anticuerpo
     coincidencias_completas = []

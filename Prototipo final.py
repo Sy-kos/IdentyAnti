@@ -32,8 +32,24 @@ ALTA_FRECUENCIA = ['k', 'Kpb', 'Jsb', 'Lub']
 # Antígenos de baja frecuencia (se descartan de las mezclas y búsquedas principales)
 BAJA_FRECUENCIA = ['Cw', 'Kpa', 'Jsa', 'Lua']
 
-# Efecto de las enzimas sobre los antígenos (D = Destruye, S = Sensibiliza/No afecta/Potencia)
-EFECTO_ENZIMAS = {'Fya': 'D', 'Fyb': 'D', 'M': 'D', 'N': 'D', 'S': 'D', 's': 'D', 'Xga': 'D'}
+EFECTO_ENZIMAS = {
+    # Duffy
+    'Fya': 'D', 'Fyb': 'D',
+    # MNS
+    'M': 'D', 'N': 'D', 'S': 'D', 's': 'D',
+    # Kell
+    'K': 'S', 'k': 'S', 'Kpa': 'S', 'Kpb': 'S', 'Jsa': 'S', 'Jsb': 'S',
+    # Rh
+    'D': 'S', 'C': 'S', 'E': 'S', 'c': 'S', 'e': 'S', 'Cw': 'S',
+    # Lewis
+    'Lea': 'S', 'Leb': 'S',
+    # Kidd
+    'Jka': 'S', 'Jkb': 'S',
+    # Otros
+    'P1': 'S',       # suele potenciarse
+    'Lua': 'S', 'Lub': 'S',  # suelen resistir/potenciar
+    'Xga': 'D'       # destruido
+}
 
 # ==========================================
 # INTERFAZ STREAMLIT

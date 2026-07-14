@@ -214,7 +214,7 @@ if archivo is not None:
 
         if evaluaciones_mezclas and evaluaciones_mezclas[0]['score'] > 0:
             confirmar_mezcla = evaluaciones_mezclas[0]['pareja']
-        else:
+                else:
             # Resguardo: intentar un candidato único
             candidatos_validos_unicos = [
                 ant for ant in candidatos_no_descartados
@@ -223,25 +223,24 @@ if archivo is not None:
             if candidatos_validos_unicos:
                 antig_confirmar_u = candidatos_validos_unicos[0]
                 conclusion = f"Resultado: Anti-{antig_confirmar_u}"
-
             else:
-            sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
-            if sospechosos_alta:
-                antig_confirmar_u = sospechosos_alta[0]
-                conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
-            else:
-                # --- Último recurso: revisar baja frecuencia ---
-                candidatos_baja = [ant for ant in BAJA_FRECUENCIA if ant in datos.columns]
-                coincidencias_baja = []
-                for ant in candidatos_baja:
-                    if (celulas_positivas[ant] == 1).all():
-                        coincidencias_baja.append(ant)
-
-                if coincidencias_baja:
-                    antig_confirmar_u = coincidencias_baja[0]
-                    conclusion = f"[Última opción - Baja frecuencia] Anti-{antig_confirmar_u}"
+                sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+                if sospechosos_alta:
+                    antig_confirmar_u = sospechosos_alta[0]
+                    conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
                 else:
-                    conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
+                    # --- Último recurso: revisar baja frecuencia ---
+                    candidatos_baja = [ant for ant in BAJA_FRECUENCIA if ant in datos.columns]
+                    coincidencias_baja = []
+                    for ant in candidatos_baja:
+                        if (celulas_positivas[ant] == 1).all():
+                            coincidencias_baja.append(ant)
+
+                    if coincidencias_baja:
+                        antig_confirmar_u = coincidencias_baja[0]
+                        conclusion = f"[Última opción - Baja frecuencia] Anti-{antig_confirmar_u}"
+                    else:
+                        conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
 
     # ============================
     # VALIDACIÓN DE MEZCLA
@@ -297,4 +296,3 @@ if archivo is not None:
         st.subheader("Controles de confirmación 3+3")
         for c in controles:
             st.write(c)
-

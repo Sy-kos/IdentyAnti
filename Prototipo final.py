@@ -88,3 +88,128 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
     else:
         salida.append(f"[Mezcla tradicional] Anti-{antig_1} + Anti-{antig_2}")
     return salida
+# ==========================================
+# INTERFAZ STREAMLIT
+# ==========================================
+st.title("Identificación de Anticuerpos Irregulares 🧪")
+
+archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+
+if archivo is not None:
+    datos = pd.read_csv(archivo, delimiter=";")
+    st.subheader("Vista previa de datos")
+    st.dataframe(datos.head())
+
+    # Limpieza
+    columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
+    datos = datos.dropna(subset=columnas_criticas, how='all')
+    datos = datos.rename(index={i:f"Célula {i+1}" for i in range(len(datos))})
+
+    usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
+    columnas_a_convertir = ANTIGENOS_TODOS+[COLUMNA_PACIENTE]
+    if usar_enzimas:
+        columnas_a_convertir.append(COLUMNA_ENZIMA)
+    columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
+    datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+
+    resultados_paciente = datos[COLUMNA_PACIENTE]
+    resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+
+    # ============================
+    # EJECUCIÓN DE LA LÓGICA CLÍNICA
+    # ============================
+    antig_confirmar_u = None
+    confirmar_mezcla = None
+    conclusion = None
+    controles = []
+
+    # Filtro de descarte
+    antigenos_descartados = set()
+    celulas_negativas = datos[resultados_paciente == 0]
+    for ant in ANTIGENOS_TODOS:
+        if ant in datos.columns and ant not in BAJA_FRECUENCIA:
+            if (celulas_negativas[ant] == 1).any():
+                antigenos_descartados.add(ant)
+
+    candidatos_no_descartados = [
+        ant for ant in ANTIGENOS_TODOS
+        if ant in datos.columns and ant not in antigenos_descartados
+        and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
+    ]
+
+    # Paso 1: único anticuerpo
+    coincidencias_completas = []
+    celulas_positivas = datos[resultados_paciente > 0]
+    for ant in candidatos_no_descartados:
+        if (celulas_positivas[ant] == 1).all():
+            coincidencias_completas.append(ant)
+
+    if len(coincidencias_completas) == 1:
+        antig_confirmar_u = coincidencias_completas[0]
+        conclusion = f"Resultado: Anti-{antig_confirmar_u}"
+        controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
+    else:
+        # Paso 2: mezclas con enzimas o modo basal
+        sospechosos_destruidos = []
+        sospechosos_resistentes = []
+        if usar_enzimas:
+            celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
+            if not celulas_negativizadas.empty:
+                for ant in candidatos_no_descartados:
+                    if EFECTO_ENZIMAS.get(ant) == 'D' and (celulas_negativizadas[ant] == 1).all():
+                        sospechosos_destruidos.append(ant)
+
+            celulas_positivas_enz = datos[resultados_enzima > 0]
+            if not celulas_positivas_enz.empty:
+                for ant in candidatos_no_descartados:
+                    if EFECTO_ENZIMAS.get(ant) != 'D' and (celulas_positivas_enz[ant] == 1).all():
+                        sospechosos_resistentes.append(ant)
+
+        total_sospechosos = sospechosos_destruidos + sospechosos_resistentes
+        if len(total_sospechosos) == 1:
+            antig_confirmar_u = total_sospechosos[0]
+            conclusion = f"Resultado: Anti-{antig_confirmar_u}"
+            controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
+        elif len(total_sospechosos) == 2:
+            confirmar_mezcla = total_sospechosos
+        else:
+            # Si no hay sospechosos claros, pasamos a evaluar alta frecuencia
+            sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+            if sospechosos_alta:
+                antig_confirmar_u = sospechosos_alta[0]
+                conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
+                controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
+            else:
+                conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
+
+    # ============================
+    # VALIDACIÓN DE MEZCLA
+    # ============================
+    if confirmar_mezcla and len(confirmar_mezcla) == 2:
+        m1, m2 = confirmar_mezcla
+        mezcla_es_coherente = validar_coherencia_dosis(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE)
+        if mezcla_es_coherente:
+            conclusion = f"Resultado (Mezcla más probable): Anti-{m1} + Anti-{m2}"
+            controles.extend(imprimir_control_mezcla(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE, COLUMNA_ENZIMA, usar_enzimas))
+        else:
+            sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+            if sospechosos_alta:
+                antig_confirmar_u = sospechosos_alta[0]
+                conclusion = f"Resultado definitivo: Anti-{antig_confirmar_u}"
+                controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
+            else:
+                conclusion = f"Resultado (Mezcla con advertencia): Anti-{m1} + Anti-{m2} (patrón plano)"
+
+    # ============================
+    # SALIDA EN STREAMLIT
+    # ============================
+    st.subheader("Conclusión")
+    if conclusion:
+        st.success(conclusion)
+    else:
+        st.warning("No se pudo determinar un resultado.")
+
+    if controles:
+        st.subheader("Controles de confirmación 3+3")
+        for c in controles:
+            st.write(c)

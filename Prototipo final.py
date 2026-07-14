@@ -109,25 +109,16 @@ def evaluar_alta_frecuencia(df, resultados, col_intensidad):
 
 
 def imprimir_control_unico(antigeno, df, resultados):
-    """
-    Genera el texto simplificado para el control 3+3 de un anticuerpo único.
-    """
-    st.write("\nControl de confirmación 3+3 (Anticuerpo único):")
     pareja = PAREJAS_CIGOTICAS.get(antigeno)
-    
+    resultados_alineados = resultados.loc[df.index]
     if pareja and pareja in df.columns:
-        resultados_alineados = resultados.loc[df.index]
-        n_homo_pos = len(df[(df[antigeno] == 1) & (df[pareja] == 0) & (resultados_alineados > 0)])
+        n_homo_pos = len(df[(df[antigeno]==1)&(df[pareja]==0)&(resultados_alineados>0)])
     else:
-        resultados_alineados = resultados.loc[df.index]
-        n_homo_pos = len(df[(df[antigeno] == 1) & (resultados_alineados > 0)])
-        
-    n_neg_no_reactivas = len(df[(df[antigeno] == 0) & (resultados_alineados == 0)])
-    
-    cumple = (n_homo_pos >= 3) and (n_neg_no_reactivas >= 3)
+        n_homo_pos = len(df[(df[antigeno]==1)&(resultados_alineados>0)])
+    n_neg_no_reactivas = len(df[(df[antigeno]==0)&(resultados_alineados==0)])
+    cumple = (n_homo_pos>=3) and (n_neg_no_reactivas>=3)
     estado = "Cumple" if cumple else "No cumple"
-    
-    st.write(f"[{estado}] Anti-{antigeno}: {n_homo_pos} células reactivas homocigotas (dosis doble) y {n_neg_no_reactivas} células negativas no reactivas.")
+    return f"[{estado}] Anti-{antigeno}: {n_homo_pos} células reactivas homocigotas y {n_neg_no_reactivas} negativas no reactivas."
 
 
 def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, col_enz, usar_enz):

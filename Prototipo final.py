@@ -88,6 +88,7 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
     else:
         salida.append(f"[Mezcla tradicional] Anti-{antig_1} + Anti-{antig_2}")
     return salida
+
 # ==========================================
 # INTERFAZ STREAMLIT
 # ==========================================
@@ -147,29 +148,31 @@ if archivo is not None:
     if len(coincidencias_completas) == 1:
         antig_confirmar_u = coincidencias_completas[0]
         conclusion = f"Resultado: Anti-{antig_confirmar_u}"
-        controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
     else:
-        # Paso 2: mezclas con enzimas o modo basal
+        # Paso 2: mezclas con enzimas
         sospechosos_destruidos = []
         sospechosos_resistentes = []
-        if usar_enzimas:
+                if usar_enzimas:
+            # Células que eran positivas en AHG pero se negativizaron en ENZ
             celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
             if not celulas_negativizadas.empty:
                 for ant in candidatos_no_descartados:
                     if EFECTO_ENZIMAS.get(ant) == 'D' and (celulas_negativizadas[ant] == 1).all():
                         sospechosos_destruidos.append(ant)
 
+            # Células que siguen positivas en ENZ
             celulas_positivas_enz = datos[resultados_enzima > 0]
             if not celulas_positivas_enz.empty:
                 for ant in candidatos_no_descartados:
                     if EFECTO_ENZIMAS.get(ant) != 'D' and (celulas_positivas_enz[ant] == 1).all():
                         sospechosos_resistentes.append(ant)
 
+        # Unimos los sospechosos
         total_sospechosos = sospechosos_destruidos + sospechosos_resistentes
+
         if len(total_sospechosos) == 1:
             antig_confirmar_u = total_sospechosos[0]
             conclusion = f"Resultado: Anti-{antig_confirmar_u}"
-            controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
         elif len(total_sospechosos) == 2:
             confirmar_mezcla = total_sospechosos
         else:
@@ -178,9 +181,55 @@ if archivo is not None:
             if sospechosos_alta:
                 antig_confirmar_u = sospechosos_alta[0]
                 conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
-                controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
             else:
-                conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
+            # --- MODO BASAL ESTÁNDAR ---
+            evaluaciones_mezclas = []
+            for i in range(len(candidatos_no_descartados)):
+                for j in range(i+1, len(candidatos_no_descartados)):
+                    ant1 = candidatos_no_descartados[i]
+                    ant2 = candidatos_no_descartados[j]
+
+                    puntos_positivos_explicados = 0
+                    penalizaciones_falsos_positivos = 0
+
+                    for idx, fila in datos.iterrows():
+                        reaccion_real = fila[COLUMNA_PACIENTE]
+                        tiene_antigenos = (fila[ant1] == 1 or fila[ant2] == 1)
+                        if reaccion_real > 0 and tiene_antigenos:
+                            puntos_positivos_explicados += 1
+                        elif reaccion_real == 0 and tiene_antigenos:
+                            penalizaciones_falsos_positivos += 1.5
+
+                    score_cobertura = puntos_positivos_explicados - penalizaciones_falsos_positivos
+                    diff1 = evaluar_dosis_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE)
+                    diff2 = evaluar_dosis_mezcla(ant2, ant1, datos, resultados_paciente, COLUMNA_PACIENTE)
+
+                    evaluaciones_mezclas.append({
+                        'pareja': (ant1, ant2),
+                        'score': score_cobertura,
+                        'suma_diffs': diff1 + diff2
+                    })
+
+            evaluaciones_mezclas = sorted(evaluaciones_mezclas, key=lambda x: (x['score'], x['suma_diffs']), reverse=True)
+
+            if evaluaciones_mezclas and evaluaciones_mezclas[0]['score'] > 0:
+                confirmar_mezcla = evaluaciones_mezclas[0]['pareja']
+            else:
+                # Resguardo: intentar un candidato único
+                candidatos_validos_unicos = [
+                    ant for ant in candidatos_no_descartados
+                    if (celulas_positivas[ant] == 1).all()
+                ]
+                if candidatos_validos_unicos:
+                    antig_confirmar_u = candidatos_validos_unicos[0]
+                    conclusion = f"Resultado: Anti-{antig_confirmar_u}"
+                else:
+                    sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+                    if sospechosos_alta:
+                        antig_confirmar_u = sospechosos_alta[0]
+                        conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
+                    else:
+                        conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
 
     # ============================
     # VALIDACIÓN DE MEZCLA
@@ -190,7 +239,14 @@ if archivo is not None:
         mezcla_es_coherente = validar_coherencia_dosis(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE)
         if mezcla_es_coherente:
             conclusion = f"Resultado (Mezcla más probable): Anti-{m1} + Anti-{m2}"
-            controles.extend(imprimir_control_mezcla(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE, COLUMNA_ENZIMA, usar_enzimas))
+            controles.extend(
+                imprimir_control_mezcla(
+                    m1, m2,
+                    datos, resultados_paciente,
+                    COLUMNA_PACIENTE, COLUMNA_ENZIMA,
+                    usar_enzimas
+                )
+            )
         else:
             sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
             if sospechosos_alta:
@@ -199,6 +255,22 @@ if archivo is not None:
                 controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
             else:
                 conclusion = f"Resultado (Mezcla con advertencia): Anti-{m1} + Anti-{m2} (patrón plano)"
+
+    # ============================
+    # CONTROLES DE CONFIRMACIÓN 3+3
+    # ============================
+    if antig_confirmar_u:
+        controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
+    elif confirmar_mezcla and len(confirmar_mezcla) == 2:
+        ant1, ant2 = confirmar_mezcla
+        controles.extend(imprimir_control_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE, COLUMNA_ENZIMA, usar_enzimas))
+    elif confirmar_mezcla and len(confirmar_mezcla) > 2:
+        for susp in confirmar_mezcla:
+            n_pos = len(datos[(datos[susp] == 1) & (resultados_paciente > 0)])
+            n_neg_u = len(datos[(datos[confirmar_mezcla].sum(axis=1) == 0) & (resultados_paciente == 0)])
+            cumple = (n_pos >= 3) and (n_neg_u >= 3)
+            estado = "Cumple" if cumple else "No cumple"
+            controles.append(f"[{estado}] Anti-{susp}: {n_pos} células reactivas y {n_neg_u} negativas puras no reactivas")
 
     # ============================
     # SALIDA EN STREAMLIT
@@ -214,20 +286,3 @@ if archivo is not None:
         for c in controles:
             st.write(c)
 
-
-    # ============================
-    # CONTROLES DE CONFIRMACIÓN 3+3
-    # ============================
-    if antig_confirmar_u:
-        # Control para anticuerpo único
-        controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
-    elif confirmar_mezcla and len(confirmar_mezcla) == 2:
-        ant1, ant2 = confirmar_mezcla
-        controles.extend(imprimir_control_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE, COLUMNA_ENZIMA, usar_enzimas))
-    elif confirmar_mezcla and len(confirmar_mezcla) != 2:
-        for susp in confirmar_mezcla:
-            n_pos = len(datos[(datos[susp] == 1) & (resultados_paciente > 0)])
-            n_neg_u = len(datos[(datos[confirmar_mezcla].sum(axis=1) == 0) & (resultados_paciente == 0)])
-            cumple = (n_pos >= 3) and (n_neg_u >= 3)
-            estado = "Cumple" if cumple else "No cumple"
-            controles.append(f"[{estado}] Anti-{susp}: {n_pos} células reactivas y {n_neg_u} negativas puras no reactivas")

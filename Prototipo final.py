@@ -338,10 +338,10 @@ if archivo is not None:
                     conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
                 else:
                     conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."# ============================
-# ============================
-# VALIDACIÓN DE MEZCLA
-# ============================
-if confirmar_mezcla is not None and len(confirmar_mezcla) == 2 and antig_confirmar_u is None:
+ # ============================
+ # VALIDACIÓN DE MEZCLA
+ # ============================
+ if confirmar_mezcla is not None and len(confirmar_mezcla) == 2 and antig_confirmar_u is None:
     m1, m2 = confirmar_mezcla
     mezcla_es_coherente = validar_coherencia_dosis(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE)
     if mezcla_es_coherente:
@@ -354,10 +354,10 @@ if confirmar_mezcla is not None and len(confirmar_mezcla) == 2 and antig_confirm
         else:
             conclusion = f"Resultado (Mezcla con advertencia): Anti-{m1} + Anti-{m2} (patrón plano)"
 
-# ============================
-# CONTROLES DE CONFIRMACIÓN 3+3
-# ============================
-if antig_confirmar_u:
+ # ============================
+ # CONTROLES DE CONFIRMACIÓN 3+3
+ # ============================
+ if antig_confirmar_u:
     resultado_unico = imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente)
     controles.extend(resultado_unico)
     # Ajustar la conclusión según el control
@@ -366,7 +366,7 @@ if antig_confirmar_u:
     else:
         conclusion = f"Resultado tentativo: Anti-{antig_confirmar_u} (no cumple 3+3)"
 
-elif confirmar_mezcla and len(confirmar_mezcla) == 2:
+ elif confirmar_mezcla and len(confirmar_mezcla) == 2:
     ant1, ant2 = confirmar_mezcla
     resultado_mezcla = imprimir_control_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE, COLUMNA_ENZIMA, usar_enzimas)
     controles.extend(resultado_mezcla)
@@ -376,7 +376,7 @@ elif confirmar_mezcla and len(confirmar_mezcla) == 2:
     else:
         conclusion = f"Resultado tentativo: Anti-{ant1} + Anti-{ant2} (no cumple 3+3)"
 
-elif confirmar_mezcla and len(confirmar_mezcla) > 2:
+ elif confirmar_mezcla and len(confirmar_mezcla) > 2:
     for susp in confirmar_mezcla:
         n_pos = len(datos[(datos[susp] == 1) & (resultados_paciente > 0)])
         n_neg_u = len(datos[(datos[confirmar_mezcla].sum(axis=1) == 0) & (resultados_paciente == 0)])

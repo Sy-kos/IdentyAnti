@@ -281,7 +281,7 @@ for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA:
         pareja = PAREJAS_CIGOTICAS.get(ant)
         if pareja and pareja in datos.columns:
-            # Caso homocigoto negativo: antígeno=1, pareja=0, reacción=0
+            # Descarte explícito: homocigoto negativo
             mask_homo_neg = (celulas_negativas[ant] == 1) & (celulas_negativas[pareja] == 0)
             if mask_homo_neg.any():
                 antigenos_descartados.add(ant)

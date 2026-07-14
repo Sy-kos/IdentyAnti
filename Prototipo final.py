@@ -303,8 +303,12 @@ if len(coincidencias_completas) == 1:
     antig_confirmar_u = coincidencias_completas[0]
     st.success(f"Resultado: Anti-{antig_confirmar_u}")
 
-if usar_enzimas:
-    for ant in ANTIGENOS_TODOS:
+else:
+    # --- PASO 2: SI NO HAY ÚNICO, INICIAR BÚSQUEDA DE MEZCLAS ---
+    fallar_a_modo_basal = False
+    
+    if usar_enzimas:
+     for ant in ANTIGENOS_TODOS:
         if ant not in datos.columns or ant in BAJA_FRECUENCIA:
             continue
         efecto = EFECTO_ENZIMAS.get(ant, 'S')
@@ -333,12 +337,6 @@ if usar_enzimas:
                 st.success(f"Resultado prioritario (patrón ENZ): Anti-{ant}")
                 break
 
-
-else:
-    # --- PASO 2: SI NO HAY ÚNICO, INICIAR BÚSQUEDA DE MEZCLAS ---
-    fallar_a_modo_basal = False
-    
-    if usar_enzimas:
         # --- MODO ENZIMAS (Mezclas asistidas por enzimas sobre los no descartados) ---
         celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
         sospechosos_destruidos = []

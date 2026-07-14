@@ -259,12 +259,12 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
         datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
      # Series de resultados limpios
-     resultados_paciente = datos[COLUMNA_PACIENTE]
-     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+      resultados_paciente = datos[COLUMNA_PACIENTE]
+      resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
 
      # Variables para almacenar conclusiones finales
-     antig_confirmar_u = None
-     confirmar_mezcla = None
+      antig_confirmar_u = None
+      confirmar_mezcla = None
 
  # ==========================================================
  # NUEVA LÓGICA CLÍNICA: FILTRO DE DESCARTE POR NEGATIVOS 

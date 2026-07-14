@@ -152,7 +152,7 @@ if archivo is not None:
         # Paso 2: mezclas con enzimas
         sospechosos_destruidos = []
         sospechosos_resistentes = []
-                if usar_enzimas:
+        if usar_enzimas:
             # Células que eran positivas en AHG pero se negativizaron en ENZ
             celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
             if not celulas_negativizadas.empty:

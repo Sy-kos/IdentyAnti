@@ -44,7 +44,6 @@ datos = None
 archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
 
 if archivo is not None:
-    columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]
     datos = pd.read_csv(archivo, delimiter=";")
     st.subheader("Vista previa de datos")
     st.dataframe(datos.head())
@@ -63,6 +62,8 @@ if archivo is not None:
 
     resultados_paciente = datos[COLUMNA_PACIENTE]
     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+else:
+    st.info("Por favor, sube un archivo CSV para iniciar el análisis.")
 
 # ==========================================
 #         FUNCIONES DE EVALUACIÓN

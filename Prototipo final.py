@@ -118,87 +118,105 @@ def imprimir_control_unico(antigeno, df, resultados):
     n_neg_no_reactivas = len(df[(df[antigeno]==0)&(resultados_alineados==0)])
     cumple = (n_homo_pos>=3) and (n_neg_no_reactivas>=3)
     estado = "Cumple" if cumple else "No cumple"
-    return f"[{estado}] Anti-{antigeno}: {n_homo_pos} células reactivas homocigotas y {n_neg_no_reactivas} negativas no reactivas."
+    return [f"[{estado}] Anti-{antigeno}: {n_homo_pos} células reactivas homocigotas y {n_neg_no_reactivas} negativas no reactivas."]
 
 
 def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, col_enz, usar_enz):
     """
-    Genera el control 3+3 adaptativo para mezclas. 
-    Si uno se destruye y el otro se mantiene/potencia:
-    - El resistente se confirma en la fase ENZ.
-    - El destruido se confirma estrictamente en la fase basal (AHG) aislando al resistente.
+    Genera el control 3+3 adaptativo para mezclas.
+    Retorna una lista de strings con los resultados en lugar de imprimir directamente.
     """
-    st.write("\nControl de confirmación 3+3 (Mezcla de anticuerpos):")
-    
+    salida = []
+    salida.append("Control de confirmación 3+3 (Mezcla de anticuerpos):")
+
     destruido_1 = EFECTO_ENZIMAS.get(antig_1) == 'D'
     destruido_2 = EFECTO_ENZIMAS.get(antig_2) == 'D'
-    
+
     # Caso: Uno se destruye y el otro resiste (con columna ENZ disponible)
     if usar_enz and (destruido_1 != destruido_2):
         if destruido_1:
             destruido, resistente = antig_1, antig_2
         else:
             destruido, resistente = antig_2, antig_1
-            
+
         pareja_res = PAREJAS_CIGOTICAS.get(resistente)
         pareja_dest = PAREJAS_CIGOTICAS.get(destruido)
-        
+
         # --- 1. EVALUAR EL RESISTENTE EN ENZIMAS ---
         if pareja_res and pareja_res in df.columns:
             n_pos_res = len(df[(df[resistente] == 1) & (df[pareja_res] == 0) & (df[col_enz] > 0)])
         else:
             n_pos_res = len(df[(df[resistente] == 1) & (df[col_enz] > 0)])
-            
+
         n_neg_res = len(df[(df[resistente] == 0) & (df[col_enz] == 0)])
-        
-        cumple_res = (n_pos_res >= 3) and (n_neg_res >= 3)
-        est_res = "Cumple" if cumple_res else "No cumple"
-        
+        est_res = "Cumple" if (n_pos_res >= 3 and n_neg_res >= 3) else "No cumple"
+
         # --- 2. EVALUAR EL DESTRUIDO EN FASE BASAL (AHG) ---
         df_puro_dest = df[df[resistente] == 0]
-        
         if pareja_dest and pareja_dest in df_puro_dest.columns:
             n_pos_dest = len(df_puro_dest[(df_puro_dest[destruido] == 1) & (df_puro_dest[pareja_dest] == 0) & (df_puro_dest[col_ahg] > 0)])
         else:
             n_pos_dest = len(df_puro_dest[(df_puro_dest[destruido] == 1) & (df_puro_dest[col_ahg] > 0)])
-            
+
         n_neg_dest = len(df[(df[destruido] == 0) & (df[resistente] == 0) & (resultados_paciente == 0)])
-        
-        cumple_dest = (n_pos_dest >= 3) and (n_neg_dest >= 3)
-        est_dest = "Cumple" if cumple_dest else "No cumple"
-        
-        st.write(f"[{est_res}] Anti-{resistente} (Evaluado en ENZ): {n_pos_res} células reactivas homocigotas y {n_neg_res} células negativas no reactivas.")
-        st.write(f"[{est_dest}] Anti-{destruido} (Evaluado en AHG puro): {n_pos_dest} células reactivas homocigotas puras y {n_neg_dest} células negativas puras no reactivas.")
+        est_dest = "Cumple" if (n_pos_dest >= 3 and n_neg_dest >= 3) else "No cumple"
+
+        salida.append(f"[{est_res}] Anti-{resistente} (Evaluado en ENZ): {n_pos_res} células reactivas homocigotas y {n_neg_res} células negativas no reactivas.")
+        salida.append(f"[{est_dest}] Anti-{destruido} (Evaluado en AHG puro): {n_pos_dest} células reactivas homocigotas puras y {n_neg_dest} células negativas puras no reactivas.")
 
     else:
-        # --- MODO TRADICIONAL (Si ambos resisten, se destruyen o no hay datos enzimáticos) ---
+        # --- MODO TRADICIONAL ---
         pareja_1 = PAREJAS_CIGOTICAS.get(antig_1)
         df_puro_1 = df[df[antig_2] == 0]
-        
         if pareja_1 and pareja_1 in df_puro_1.columns:
             n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[pareja_1] == 0) & (df_puro_1[col_ahg] > 0)])
         else:
             n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[col_ahg] > 0)])
-            
+
         n_neg_no_reactivas_1 = len(df[(df[antig_1] == 0) & (df[antig_2] == 0) & (resultados_paciente == 0)])
-        cumple_1 = (n_homo_pos_1 >= 3) and (n_neg_no_reactivas_1 >= 3)
-        estado_1 = "Cumple" if cumple_1 else "No cumple"
-        
+        estado_1 = "Cumple" if (n_homo_pos_1 >= 3 and n_neg_no_reactivas_1 >= 3) else "No cumple"
+
         pareja_2 = PAREJAS_CIGOTICAS.get(antig_2)
         df_puro_2 = df[df[antig_1] == 0]
-        
         if pareja_2 and pareja_2 in df_puro_2.columns:
-           n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[pareja_2] == 0) & (df_puro_2[col_ahg] > 0)])
+            n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[pareja_2] == 0) & (df_puro_2[col_ahg] > 0)])
         else:
             n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[col_ahg] > 0)])
-            
-        n_neg_no_reactivas_2 = len(df[(df[antig_2] == 0) & (df[antig_1] == 0) & (resultados_paciente == 0)])
-        cumple_2 = (n_homo_pos_2 >= 3) and (n_neg_no_reactivas_2 >= 3)
-        estado_2 = "Cumple" if cumple_2 else "No cumple"
-        
-        st.write(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
-        st.write(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
 
+        n_neg_no_reactivas_2 = len(df[(df[antig_2] == 0) & (df[antig_1] == 0) & (resultados_paciente == 0)])
+        estado_2 = "Cumple" if (n_homo_pos_2 >= 3 and n_neg_no_reactivas_2 >= 3) else "No cumple"
+
+        salida.append(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
+        salida.append(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
+
+    return salida
+
+else:
+    # --- MODO TRADICIONAL (Si ambos resisten, se destruyen o no hay datos enzimáticos) ---
+    pareja_1 = PAREJAS_CIGOTICAS.get(antig_1)
+    df_puro_1 = df[df[antig_2] == 0]
+
+    if pareja_1 and pareja_1 in df_puro_1.columns:
+        n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[pareja_1] == 0) & (df_puro_1[col_ahg] > 0)])
+    else:
+        n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[col_ahg] > 0)])
+
+    n_neg_no_reactivas_1 = len(df[(df[antig_1] == 0) & (df[antig_2] == 0) & (resultados_paciente == 0)])
+    estado_1 = "Cumple" if (n_homo_pos_1 >= 3 and n_neg_no_reactivas_1 >= 3) else "No cumple"
+
+    pareja_2 = PAREJAS_CIGOTICAS.get(antig_2)
+    df_puro_2 = df[df[antig_1] == 0]
+
+    if pareja_2 and pareja_2 in df_puro_2.columns:
+        n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[pareja_2] == 0) & (df_puro_2[col_ahg] > 0)])
+    else:
+        n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[col_ahg] > 0)])
+
+    n_neg_no_reactivas_2 = len(df[(df[antig_2] == 0) & (df[antig_1] == 0) & (resultados_paciente == 0)])
+    estado_2 = "Cumple" if (n_homo_pos_2 >= 3 and n_neg_no_reactivas_2 >= 3) else "No cumple"
+
+    salida.append(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
+    salida.append(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
 
 # ==========================================
 # INTERFAZ STREAMLIT

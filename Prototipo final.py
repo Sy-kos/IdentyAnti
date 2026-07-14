@@ -36,6 +36,33 @@ BAJA_FRECUENCIA = ['Cw', 'Kpa', 'Jsa', 'Lua']
 EFECTO_ENZIMAS = {'Fya': 'D', 'Fyb': 'D', 'M': 'D', 'N': 'D', 'S': 'D', 's': 'D', 'Xga': 'D'}
 
 # ==========================================
+# INTERFAZ STREAMLIT
+# ==========================================
+st.title("Identificación de Anticuerpos Irregulares 🧪")
+
+archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+
+if archivo is not None:
+    datos = pd.read_csv(archivo, delimiter=";")
+    st.subheader("Vista previa de datos")
+    st.dataframe(datos.head())
+
+    # Limpieza
+    columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
+    datos = datos.dropna(subset=columnas_criticas, how='all')
+    datos = datos.rename(index={i:f"Célula {i+1}" for i in range(len(datos))})
+
+    usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
+    columnas_a_convertir = ANTIGENOS_TODOS+[COLUMNA_PACIENTE]
+    if usar_enzimas:
+        columnas_a_convertir.append(COLUMNA_ENZIMA)
+    columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
+    datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+
+    resultados_paciente = datos[COLUMNA_PACIENTE]
+    resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+
+# ==========================================
 #         FUNCIONES DE EVALUACIÓN
 # ==========================================
 

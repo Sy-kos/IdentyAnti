@@ -290,17 +290,20 @@ confirmar_mezcla = None
 
 antigenos_descartados = set()
 
+# Normalizar resultados: 0 = negativo, 1 = positivo
+resultados_binarios = (resultados_paciente > 0).astype(int)
+
 # Descarte explícito para todos los pares antitéticos
 for ant, pareja in PAREJAS_CIGOTICAS.items():
     if ant in datos.columns and pareja in datos.columns and ant not in BAJA_FRECUENCIA:
-        mask_homo_neg = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_paciente == 0)
+        mask_homo_neg = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_binarios == 0)
         if mask_homo_neg.any():
             antigenos_descartados.add(ant)
 
 # Descarte general para antígenos sin pareja definida
 for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA and ant not in PAREJAS_CIGOTICAS:
-        mask_general_neg = (datos[ant] == 1) & (resultados_paciente == 0)
+        mask_general_neg = (datos[ant] == 1) & (resultados_binarios == 0)
         if mask_general_neg.any():
             antigenos_descartados.add(ant)
 

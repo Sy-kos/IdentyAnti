@@ -277,18 +277,25 @@ confirmar_mezcla = None
 antigenos_descartados = set()
 celulas_negativas = datos[resultados_paciente == 0]
 
+candidatos_no_descartados = [
+    ant for ant in ANTIGENOS_TODOS 
+    if ant in datos.columns and ant not in antigenos_descartados and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
+]
+
 for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA:
         pareja = PAREJAS_CIGOTICAS.get(ant)
         if pareja and pareja in datos.columns:
             # Descarte explícito: homocigoto negativo
-            mask_homo_neg = (celulas_negativas[ant] == 1) & (celulas_negativas[pareja] == 0)
+            mask_homo_neg = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_paciente == 0)
             if mask_homo_neg.any():
                 antigenos_descartados.add(ant)
         else:
             # Caso general: cualquier presencia en células negativas
-            if (celulas_negativas[ant] == 1).any():
+            mask_general_neg = (datos[ant] == 1) & (resultados_paciente == 0)
+            if mask_general_neg.any():
                 antigenos_descartados.add(ant)
+
 
 # 2. Identificar candidatos viables (Los que NO fueron descartados)
 candidatos_no_descartados = [

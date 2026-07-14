@@ -332,6 +332,7 @@ if archivo is not None:
                     conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
                 else:
                     conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."# ============================
+# ============================
 # VALIDACIÓN DE MEZCLA
 # ============================
 if confirmar_mezcla and len(confirmar_mezcla) == 2 and not antig_confirmar_u:
@@ -339,20 +340,11 @@ if confirmar_mezcla and len(confirmar_mezcla) == 2 and not antig_confirmar_u:
     mezcla_es_coherente = validar_coherencia_dosis(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE)
     if mezcla_es_coherente:
         conclusion = f"Resultado (Mezcla más probable): Anti-{m1} + Anti-{m2}"
-        controles.extend(
-            imprimir_control_mezcla(
-                m1, m2,
-                datos, resultados_paciente,
-                COLUMNA_PACIENTE, COLUMNA_ENZIMA,
-                usar_enzimas
-            )
-        )
     else:
         sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
         if sospechosos_alta:
             antig_confirmar_u = sospechosos_alta[0]
             conclusion = f"Resultado definitivo: Anti-{antig_confirmar_u}"
-            controles.append(imprimir_control_unico(antig_confirmar_u, datos, resultados_paciente))
         else:
             conclusion = f"Resultado (Mezcla con advertencia): Anti-{m1} + Anti-{m2} (patrón plano)"
 

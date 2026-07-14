@@ -237,73 +237,71 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
         st.write(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
         st.write(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
 
-
-
 # ==========================================
 #             EJECUCIÓN DEL ANÁLISIS
 # ==========================================
 
 # --- LIMPIEZA: Eliminar filas vacías y basura del CSV ---
-columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]
-datos = datos.dropna(subset=columnas_criticas, how='all')
+ columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]
+ datos = datos.dropna(subset=columnas_criticas, how='all')
 
-# Renombrar las filas de las células activas
-datos = datos.rename(index={i: f"Célula {i+1}" for i in range(len(datos))})
+ # Renombrar las filas de las células activas
+ datos = datos.rename(index={i: f"Célula {i+1}" for i in range(len(datos))})
 
-# 2. Pre-procesamiento de datos numéricos
-usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
+ # 2. Pre-procesamiento de datos numéricos
+ usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
 
-columnas_a_convertir = ANTIGENOS_TODOS + [COLUMNA_PACIENTE]
-if usar_enzimas:
+ columnas_a_convertir = ANTIGENOS_TODOS + [COLUMNA_PACIENTE]
+  if usar_enzimas:
     columnas_a_convertir.append(COLUMNA_ENZIMA)
 
-columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
-datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+ columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
+ datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
-# Series de resultados limpios
-resultados_paciente = datos[COLUMNA_PACIENTE]
-resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+ # Series de resultados limpios
+ resultados_paciente = datos[COLUMNA_PACIENTE]
+ resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
 
-# Variables para almacenar conclusiones finales
-antig_confirmar_u = None
-confirmar_mezcla = None
+ # Variables para almacenar conclusiones finales
+ antig_confirmar_u = None
+ confirmar_mezcla = None
 
-# ==========================================================
-# NUEVA LÓGICA CLÍNICA: FILTRO DE DESCARTE POR NEGATIVOS
-# ==========================================================
+ # ==========================================================
+ # NUEVA LÓGICA CLÍNICA: FILTRO DE DESCARTE POR NEGATIVOS 
+ # ==========================================================
 
-# 1. Identificar antígenos descartados (Presentes en células donde AHG == 0)
-# Se excluyen de este descarte automático estricto a los de baja frecuencia
-antigenos_descartados = set()
-celulas_negativas = datos[resultados_paciente == 0]
+ # 1. Identificar antígenos descartados (Presentes en células donde AHG == 0)
+ # Se excluyen de este descarte automático estricto a los de baja frecuencia
+ antigenos_descartados = set()
+ celulas_negativas = datos[resultados_paciente == 0]
 
-for ant in ANTIGENOS_TODOS:
+ for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA:
         # Si el antígeno está presente (1) en una célula donde la reacción real es 0, se descarta
         if (celulas_negativas[ant] == 1).any():
             antigenos_descartados.add(ant)
 
-# 2. Identificar candidatos viables (Los que NO fueron descartados)
-candidatos_no_descartados = [
+ # 2. Identificar candidatos viables (Los que NO fueron descartados)
+ candidatos_no_descartados = [
     ant for ant in ANTIGENOS_TODOS 
     if ant in datos.columns and ant not in antigenos_descartados and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
-]
+ ]
 
-# --- PASO 1: EVALUAR SI UN ÚNICO ANTICUERPO EXPLICA TODOS LOS POSITIVOS ---
-coincidencias_completas = []
-celulas_positivas = datos[resultados_paciente > 0]
+ # --- PASO 1: EVALUAR SI UN ÚNICO ANTICUERPO EXPLICA TODOS LOS POSITIVOS ---
+ coincidencias_completas = []
+ celulas_positivas = datos[resultados_paciente > 0]
 
-for ant in candidatos_no_descartados:
+ for ant in candidatos_no_descartados:
     # Para ser considerado culpable único, debe estar presente en TODAS las células reactivas
     if (celulas_positivas[ant] == 1).all():
         coincidencias_completas.append(ant)
 
-# Si hay exactamente un antígeno que sobrevivió al filtro y cubre los positivos, nos quedamos con él
-if len(coincidencias_completas) == 1:
+ # Si hay exactamente un antígeno que sobrevivió al filtro y cubre los positivos, nos quedamos con él
+ if len(coincidencias_completas) == 1:
     antig_confirmar_u = coincidencias_completas[0]
     st.success(f"Resultado: Anti-{antig_confirmar_u}")
 
-else:
+ else:
     # --- PASO 2: SI NO HAY ÚNICO, INICIAR BÚSQUEDA DE MEZCLAS ---
     fallar_a_modo_basal = False
     

@@ -290,8 +290,6 @@ for ant in ANTIGENOS_TODOS:
         if mask_general_neg.any():
             antigenos_descartados.add(ant)
 
-st.write("Antígenos descartados:", antigenos_descartados)
-
 # 2. Identificar candidatos viables (Los que NO fueron descartados)
 candidatos_no_descartados = [
     ant for ant in ANTIGENOS_TODOS 

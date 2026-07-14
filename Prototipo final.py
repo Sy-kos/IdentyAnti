@@ -223,23 +223,23 @@ if archivo is not None:
             if candidatos_validos_unicos:
                 antig_confirmar_u = candidatos_validos_unicos[0]
                 conclusion = f"Resultado: Anti-{antig_confirmar_u}"
-    else:
-        sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
-        if sospechosos_alta:
+else:
+    sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+    if sospechosos_alta:
         antig_confirmar_u = sospechosos_alta[0]
         conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
-        else:
+    else:
         # --- Último recurso: revisar baja frecuencia ---
-         candidatos_baja = [ant for ant in BAJA_FRECUENCIA if ant in datos.columns]
+        candidatos_baja = [ant for ant in BAJA_FRECUENCIA if ant in datos.columns]
         coincidencias_baja = []
-          for ant in candidatos_baja:
+        for ant in candidatos_baja:
             if (celulas_positivas[ant] == 1).all():
                 coincidencias_baja.append(ant)
 
-          if coincidencias_baja:
+        if coincidencias_baja:
             antig_confirmar_u = coincidencias_baja[0]
             conclusion = f"[Última opción - Baja frecuencia] Anti-{antig_confirmar_u}"
-          else:
+        else:
             conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
 
     # ============================

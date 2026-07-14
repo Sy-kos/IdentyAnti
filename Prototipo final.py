@@ -175,7 +175,7 @@ if archivo is not None:
             conclusion = f"Resultado: Anti-{antig_confirmar_u}"
         elif len(total_sospechosos) == 2:
             confirmar_mezcla = total_sospechosos
-else:
+
     # Si no hay sospechosos claros, pasamos a evaluar alta frecuencia
     sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
     if sospechosos_alta:

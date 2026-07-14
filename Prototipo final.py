@@ -109,7 +109,7 @@ elif opcion == "Imagen":
     if imagen is not None:
         # Aquí podrías dejarlo vacío o simular un DataFrame
         # datos = convertir_imagen_a_dataframe(imagen)
-        st.info("Todavía mi cerebro no da para poner con imagen, sabrá dios cómo logré lo que hay, amén")
+        st.info("Todavía mi cerebro no da para poner con imagen, sabrá dios cómo logré lo que hay, amén. Calmate por deoooos, siempre puedes modificar el csv manual, no seas floj@")
 
 
 if 'datos' in locals():

@@ -63,7 +63,7 @@ if archivo is not None:
     resultados_paciente = datos[COLUMNA_PACIENTE]
     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
 else:
-    st.info("Por favor, sube un archivo CSV para iniciar el análisis.")
+    st.info("Por favor, sube un archivo CSV para iniciar el análisis. Ignora ese error feo de abajo, después lo arreglo.")
 
 # ==========================================
 #         FUNCIONES DE EVALUACIÓN

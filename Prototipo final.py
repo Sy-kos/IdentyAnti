@@ -237,34 +237,34 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
         st.write(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
         st.write(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
 
- # ==========================================
- #             EJECUCIÓN DEL ANÁLISIS
- # ==========================================
+     # ==========================================
+     #             EJECUCIÓN DEL ANÁLISIS
+     # ==========================================
  
- # --- LIMPIEZA: Eliminar filas vacías y basura del CSV ---
-    columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]
-    datos = datos.dropna(subset=columnas_criticas, how='all')
+     # --- LIMPIEZA: Eliminar filas vacías y basura del CSV ---
+        columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]
+        datos = datos.dropna(subset=columnas_criticas, how='all')
 
- # Renombrar las filas de las células activas
-    datos = datos.rename(index={i: f"Célula {i+1}" for i in range(len(datos))})
+     # Renombrar las filas de las células activas
+        datos = datos.rename(index={i: f"Célula {i+1}" for i in range(len(datos))})
 
- # 2. Pre-procesamiento de datos numéricos
-    usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
+     # 2. Pre-procesamiento de datos numéricos
+        usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
 
-    columnas_a_convertir = ANTIGENOS_TODOS + [COLUMNA_PACIENTE]
-    if usar_enzimas:
-     columnas_a_convertir.append(COLUMNA_ENZIMA)
+        columnas_a_convertir = ANTIGENOS_TODOS + [COLUMNA_PACIENTE]
+        if usar_enzimas:
+         columnas_a_convertir.append(COLUMNA_ENZIMA)
 
-     columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
-     datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+         columnas_validas = [col for col in columnas_a_convertir if col in datos.columns]
+        datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
- # Series de resultados limpios
- resultados_paciente = datos[COLUMNA_PACIENTE]
- resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+     # Series de resultados limpios
+     resultados_paciente = datos[COLUMNA_PACIENTE]
+     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
 
- # Variables para almacenar conclusiones finales
- antig_confirmar_u = None
- confirmar_mezcla = None
+     # Variables para almacenar conclusiones finales
+     antig_confirmar_u = None
+     confirmar_mezcla = None
 
  # ==========================================================
  # NUEVA LÓGICA CLÍNICA: FILTRO DE DESCARTE POR NEGATIVOS 

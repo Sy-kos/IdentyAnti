@@ -99,10 +99,6 @@ opcion = st.radio("¿Qué quieres subir?", ["CSV", "Imagen"])
 if opcion == "Imagen":
     st.warning("Todavía no se con imagen, se hace lo que se puede.")
     imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
-    if imagen is not None:
-        # Aquí podrías dejarlo vacío o simular un DataFrame
-        # datos = convertir_imagen_a_dataframe(imagen)
-        st.info("Todavía mi cerebro no da para poner con imagen, sabrá dios cómo logré lo que hay, amén. Calmate por deoooos, siempre puedes modificar el csv manual, no seas floj@")
 
 elif opcion == "CSV":
     archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])

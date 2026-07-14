@@ -92,14 +92,25 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 # ==========================================
 # INTERFAZ STREAMLIT
 # ==========================================
-st.title("Identificación de Anticuerpos Irregulares 🧪")
+opcion = st.radio("¿Qué quieres subir?", ["CSV", "Imagen"])
 
-archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+if opcion == "CSV":
+    archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+    if archivo is not None:
+        datos = pd.read_csv(archivo, delimiter=";")
+        st.subheader("Vista previa de datos")
+        st.dataframe(datos.head())
 
-if archivo is not None:
-    datos = pd.read_csv(archivo, delimiter=";")
-    st.subheader("Vista previa de datos")
-    st.dataframe(datos.head())
+elif opcion == "Imagen":
+    imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
+    if imagen is not None:
+        # Aquí usarías OCR (por ejemplo easyocr) para leer la tabla
+        import easyocr
+        reader = easyocr.Reader(['es'])
+        resultados = reader.readtext(imagen)
+        st.write("Texto detectado:", resultados)
+        # Luego transformarías 'resultados' en un DataFrame con columnas AHG, ENZ y antígenos
+        # datos = pd.DataFrame(...)
 
     # Limpieza
     columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]

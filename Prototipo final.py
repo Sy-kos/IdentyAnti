@@ -39,9 +39,9 @@ EFECTO_ENZIMAS = {'Fya': 'D', 'Fyb': 'D', 'M': 'D', 'N': 'D', 'S': 'D', 's': 'D'
 # INTERFAZ STREAMLIT
 # ==========================================
 st.title("Identificación de Anticuerpos Irregulares 🧪")
+datos = None
 
 archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
-datos = None
 
 if archivo is not None:
     datos = pd.read_csv(archivo, delimiter=";")

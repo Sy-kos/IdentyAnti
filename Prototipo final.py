@@ -102,29 +102,29 @@ if archivo is not None:
     st.dataframe(datos.head())
 
     # Limpieza
-    columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
-    datos = datos.dropna(subset=columnas_criticas, how='all')
-    datos = datos.rename(index={i:f"Célula {i+1}" for i in range(len(datos))})
+columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
+datos = datos.dropna(subset=columnas_criticas, how='all')
+datos = datos.rename(index={i:f"Célula {i+1}" for i in range(len(datos))})
 
-    usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
+usar_enzimas = COLUMNA_ENZIMA in datos.columns and datos[COLUMNA_ENZIMA].notna().any()
 
-    # Definir columnas a convertir
-    columnas_a_convertir = ANTIGENOS_TODOS+[COLUMNA_PACIENTE]
-    if usar_enzimas:
+# Definir columnas a convertir
+columnas_a_convertir = ANTIGENOS_TODOS+[COLUMNA_PACIENTE]
+if usar_enzimas:
     columnas_a_convertir.append(COLUMNA_ENZIMA)
 
-    # Solo conservar columnas que tengan al menos un resultado distinto de cero
-    columnas_validas = [
+# Solo conservar columnas que tengan al menos un resultado distinto de cero
+columnas_validas = [
     col for col in columnas_a_convertir
     if col in datos.columns and datos[col].notna().any() and (datos[col] != 0).any()
- ]
+]
 
-    # Convertir solo esas columnas
-    datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+# Convertir solo esas columnas
+datos[columnas_validas] = datos[columnas_validas].apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
 
-    # Resultados del paciente y enzimas
-    resultados_paciente = datos[COLUMNA_PACIENTE]
-    resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+# Resultados del paciente y enzimas
+resultados_paciente = datos[COLUMNA_PACIENTE]
+resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
 
     # ============================
     # EJECUCIÓN DE LA LÓGICA CLÍNICA

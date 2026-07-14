@@ -399,3 +399,7 @@ if conclusion:
 else:
     st.warning("No se pudo determinar un resultado.")
 
+if controles:
+    st.subheader("Controles de confirmación 3+3")
+    for c in controles:
+        st.write(c)

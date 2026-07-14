@@ -110,6 +110,7 @@ elif opcion == "Imagen":
         st.subheader("Vista previa de datos generados desde imagen")
         st.dataframe(datos.head())
 
+if 'datos' in locals():
     # Limpieza
     columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
     datos = datos.dropna(subset=columnas_criticas, how='all')

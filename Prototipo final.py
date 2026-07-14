@@ -95,6 +95,23 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 st.title("Identificación de Anticuerpos Irregulares 🧪")
 
 archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+opcion = st.radio("¿Qué quieres subir?", ["CSV", "Imagen"])
+
+if opcion == "CSV":
+    archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+    if archivo is not None:
+        datos = pd.read_csv(archivo, delimiter=";")
+        st.subheader("Vista previa de datos")
+        st.dataframe(datos.head())
+
+elif opcion == "Imagen":
+    imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
+    if imagen is not None:
+        # Aquí llamas a la IA de visión (Azure Computer Vision o EasyOCR)
+        # y conviertes la tabla detectada en un DataFrame
+        datos = convertir_imagen_a_dataframe(imagen)
+        st.subheader("Vista previa de datos generados desde imagen")
+        st.dataframe(datos.head())
 
 if archivo is not None:
     datos = pd.read_csv(archivo, delimiter=";")

@@ -308,35 +308,6 @@ else:
     fallar_a_modo_basal = False
     
     if usar_enzimas:
-     for ant in ANTIGENOS_TODOS:
-        if ant not in datos.columns or ant in BAJA_FRECUENCIA:
-            continue
-        efecto = EFECTO_ENZIMAS.get(ant, 'S')
-        pareja = PAREJAS_CIGOTICAS.get(ant)
-
-        # Células homocigotas
-        if pareja and pareja in datos.columns:
-            celulas_homo = datos[(datos[ant] == 1) & (datos[pareja] == 0)]
-        else:
-            celulas_homo = datos[datos[ant] == 1]
-
-        if celulas_homo.empty:
-            continue
-
-        if efecto == 'D':
-            mask = (celulas_homo[COLUMNA_PACIENTE] > 0) & (celulas_homo[COLUMNA_ENZIMA] == 0)
-            if mask.all():
-                antig_confirmar_u = ant
-                st.success(f"Resultado prioritario (patrón ENZ): Anti-{ant}")
-                break
-
-        elif efecto == 'S':
-            mask = (celulas_homo[COLUMNA_PACIENTE] > 0) & (celulas_homo[COLUMNA_ENZIMA] > 0)
-            if mask.all():
-                antig_confirmar_u = ant
-                st.success(f"Resultado prioritario (patrón ENZ): Anti-{ant}")
-                break
-
         # --- MODO ENZIMAS (Mezclas asistidas por enzimas sobre los no descartados) ---
         celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
         sospechosos_destruidos = []

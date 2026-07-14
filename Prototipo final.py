@@ -106,9 +106,8 @@ if opcion == "CSV":
 elif opcion == "Imagen":
     imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
     if imagen is not None:
-        datos = convertir_imagen_a_dataframe(imagen)
-        st.subheader("Vista previa de datos generados desde imagen")
-        st.dataframe(datos.head())
+        st.warning("La conversión de imagen a CSV aún no está implementada (Sabrá dios como logre lo que hay, no pidaan mucho)")
+
 
 if 'datos' in locals():
     # Limpieza

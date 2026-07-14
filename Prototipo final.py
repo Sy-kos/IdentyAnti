@@ -32,24 +32,8 @@ ALTA_FRECUENCIA = ['k', 'Kpb', 'Jsb', 'Lub']
 # Antígenos de baja frecuencia (se descartan de las mezclas y búsquedas principales)
 BAJA_FRECUENCIA = ['Cw', 'Kpa', 'Jsa', 'Lua']
 
-EFECTO_ENZIMAS = {
-    # Duffy
-    'Fya': 'D', 'Fyb': 'D',
-    # MNS
-    'M': 'D', 'N': 'D', 'S': 'D', 's': 'D',
-    # Kell
-    'K': 'S', 'k': 'S', 'Kpa': 'S', 'Kpb': 'S', 'Jsa': 'S', 'Jsb': 'S',
-    # Rh
-    'D': 'S', 'C': 'S', 'E': 'S', 'c': 'S', 'e': 'S', 'Cw': 'S',
-    # Lewis
-    'Lea': 'S', 'Leb': 'S',
-    # Kidd
-    'Jka': 'S', 'Jkb': 'S',
-    # Otros
-    'P1': 'S',       # suele potenciarse
-    'Lua': 'S', 'Lub': 'S',  # suelen resistir/potenciar
-    'Xga': 'D'       # destruido
-}
+# Efecto de las enzimas sobre los antígenos (D = Destruye, S = Sensibiliza/No afecta/Potencia)
+EFECTO_ENZIMAS = {'Fya': 'D', 'Fyb': 'D', 'M': 'D', 'N': 'D', 'S': 'D', 's': 'D', 'Xga': 'D'}
 
 # ==========================================
 # INTERFAZ STREAMLIT
@@ -288,130 +272,100 @@ confirmar_mezcla = None
 # NUEVA LÓGICA CLÍNICA: FILTRO DE DESCARTE POR NEGATIVOS
 # ==========================================================
 
+# 1. Identificar antígenos descartados (Presentes en células donde AHG == 0)
+# Se excluyen de este descarte automático estricto a los de baja frecuencia
 antigenos_descartados = set()
+celulas_negativas = datos[resultados_paciente == 0]
 
-# Normalizar resultados: 0 = negativo, 1 = positivo
-resultados_binarios = (resultados_paciente > 0).astype(int)
-
-# Descarte explícito para todos los pares antitéticos
-for ant, pareja in PAREJAS_CIGOTICAS.items():
-    if ant in datos.columns and pareja in datos.columns and ant not in BAJA_FRECUENCIA:
-        mask_homo_neg = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_binarios == 0)
-        if mask_homo_neg.any():
-            antigenos_descartados.add(ant)
-
-# Descarte general para antígenos sin pareja definida
 for ant in ANTIGENOS_TODOS:
-    if ant in datos.columns and ant not in BAJA_FRECUENCIA and ant not in PAREJAS_CIGOTICAS:
-        mask_general_neg = (datos[ant] == 1) & (resultados_binarios == 0)
-        if mask_general_neg.any():
+    if ant in datos.columns and ant not in BAJA_FRECUENCIA:
+        # Si el antígeno está presente (1) en una célula donde la reacción real es 0, se descarta
+        if (celulas_negativas[ant] == 1).any():
             antigenos_descartados.add(ant)
-
-# 👀 Verificación en pantalla
-st.write("Antígenos descartados por negativos:", antigenos_descartados)
 
 # 2. Identificar candidatos viables (Los que NO fueron descartados)
 candidatos_no_descartados = [
     ant for ant in ANTIGENOS_TODOS 
-    if ant in datos.columns 
-    and ant not in antigenos_descartados 
-    and ant not in ALTA_FRECUENCIA 
-    and ant not in BAJA_FRECUENCIA
+    if ant in datos.columns and ant not in antigenos_descartados and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
 ]
-
-st.write("Candidatos viables:", candidatos_no_descartados)
 
 # --- PASO 1: EVALUAR SI UN ÚNICO ANTICUERPO EXPLICA TODOS LOS POSITIVOS ---
 coincidencias_completas = []
 celulas_positivas = datos[resultados_paciente > 0]
 
 for ant in candidatos_no_descartados:
-    pareja = PAREJAS_CIGOTICAS.get(ant)
+    # Para ser considerado culpable único, debe estar presente en TODAS las células reactivas
     if (celulas_positivas[ant] == 1).all():
-        # Verificar que no esté en homocigosis negativa dentro de positivos
-        if pareja and pareja in celulas_positivas.columns:
-            mask_homo_pos = (celulas_positivas[ant] == 1) & (celulas_positivas[pareja] == 0)
-            if mask_homo_pos.any():
-                # Si aparece en dosis doble en positivos, se descarta
-                continue
         coincidencias_completas.append(ant)
-
 
 # Si hay exactamente un antígeno que sobrevivió al filtro y cubre los positivos, nos quedamos con él
 if len(coincidencias_completas) == 1:
     antig_confirmar_u = coincidencias_completas[0]
     st.success(f"Resultado: Anti-{antig_confirmar_u}")
 
-    # --- PASO 2: PRIORIZAR ENZIMAS SI EXISTEN ---
-if usar_enzimas:
-    st.info("Se detectó columna ENZ, priorizando confirmación enzimática...")
-
-    celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
-    sospechosos_destruidos = []
-    if not celulas_negativizadas.empty:
-        for ant in candidatos_no_descartados:
-            if EFECTO_ENZIMAS.get(ant) == 'D' and (celulas_negativizadas[ant] == 1).all():
-                sospechosos_destruidos.append(ant)
-
-    celulas_positivas_enz = datos[resultados_enzima > 0]
-    sospechosos_resistentes = []
-    if not celulas_positivas_enz.empty:
-        for ant in candidatos_no_descartados:
-            if EFECTO_ENZIMAS.get(ant) != 'D' and (celulas_positivas_enz[ant] == 1).all():
-                sospechosos_resistentes.append(ant)
-
-    total_sospechosos = sospechosos_destruidos + sospechosos_resistentes
-
-    if len(total_sospechosos) == 1:
-        antig_confirmar_u = total_sospechosos[0]
-        st.success(f"Resultado prioritario (ENZ): Anti-{antig_confirmar_u}")
-    elif len(total_sospechosos) > 1:
-        confirmar_mezcla = total_sospechosos
-        st.success(f"Resultado prioritario (ENZ): Mezcla {confirmar_mezcla}")
-    else:
-        # Si no hay evidencia clara en ENZ, recién pasar a modo basal
-        fallar_a_modo_basal = True
-
+else:
+    # --- PASO 2: SI NO HAY ÚNICO, INICIAR BÚSQUEDA DE MEZCLAS ---
+    fallar_a_modo_basal = False
     
-# --- MODO BASAL ESTÁNDAR (Puntuación probabilística sobre los candidatos restantes) ---
-evaluaciones_mezclas = []
+    if usar_enzimas:
+        # --- MODO ENZIMAS (Mezclas asistidas por enzimas sobre los no descartados) ---
+        celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
+        sospechosos_destruidos = []
+        
+        if not celulas_negativizadas.empty:
+            for ant in candidatos_no_descartados:
+                if EFECTO_ENZIMAS.get(ant) == 'D' and (celulas_negativizadas[ant] == 1).all():
+                    sospechosos_destruidos.append(ant)
+                        
+        celulas_positivas_enz = datos[resultados_enzima > 0]
+        sospechosos_resistentes = []
+        if not celulas_positivas_enz.empty:
+            for ant in candidatos_no_descartados:
+                if EFECTO_ENZIMAS.get(ant) != 'D' and (celulas_positivas_enz[ant] == 1).all():
+                    sospechosos_resistentes.append(ant)
 
-for i in range(len(candidatos_no_descartados)):
-    for j in range(i+1, len(candidatos_no_descartados)):
-        ant1 = candidatos_no_descartados[i]
-        ant2 = candidatos_no_descartados[j]
+        total_sospechosos = sospechosos_destruidos + sospechosos_resistentes
         
-        puntos_positivos_explicados = 0
-        penalizaciones_falsos_positivos = 0
-        
-        for idx, fila in datos.iterrows():
-            reaccion_real = fila[COLUMNA_PACIENTE]
-            tiene_antigenos = (fila[ant1] == 1 or fila[ant2] == 1)
-            
-            if reaccion_real > 0 and tiene_antigenos:
-                puntos_positivos_explicados += 1
-            elif reaccion_real == 0 and tiene_antigenos:
-                penalizaciones_falsos_positivos += 1.5 
-        
-        # 🔧 Ajuste: penalizar si alguno aparece en homocigosis positiva
-        for ant in [ant1, ant2]:
-            pareja = PAREJAS_CIGOTICAS.get(ant)
-            if pareja and pareja in datos.columns:
-                mask_homo_pos = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_paciente > 0)
-                if mask_homo_pos.any():
-                    penalizaciones_falsos_positivos += 5  # penalización fuerte
-        
-        score_cobertura = puntos_positivos_explicados - penalizaciones_falsos_positivos
-        
-        diff1 = evaluar_dosis_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE)
-        diff2 = evaluar_dosis_mezcla(ant2, ant1, datos, resultados_paciente, COLUMNA_PACIENTE)
-        
-        evaluaciones_mezclas.append({
-            'pareja': (ant1, ant2),
-            'score': score_cobertura,
-            'suma_diffs': diff1 + diff2
-        })
+        if len(total_sospechosos) == 0:
+            fallar_a_modo_basal = True
+        elif len(total_sospechosos) == 1:
+            antig_confirmar_u = total_sospechosos[0]
+            st.success(f"Resultado: Anti-{antig_confirmar_u}")
+        else:
+            confirmar_mezcla = total_sospechosos
+            # No imprimimos inmediatamente; validaremos la dosis en la sección posterior de impresión
 
+    if not usar_enzimas or fallar_a_modo_basal:
+        # --- MODO BASAL ESTÁNDAR (Puntuación probabilística sobre los candidatos restantes) ---
+        evaluaciones_mezclas = []
+        
+        for i in range(len(candidatos_no_descartados)):
+            for j in range(i+1, len(candidatos_no_descartados)):
+                ant1 = candidatos_no_descartados[i]
+                ant2 = candidatos_no_descartados[j]
+                
+                puntos_positivos_explicados = 0
+                penalizaciones_falsos_positivos = 0
+                
+                for idx, fila in datos.iterrows():
+                    reaccion_real = fila[COLUMNA_PACIENTE]
+                    tiene_antigenos = (fila[ant1] == 1 or fila[ant2] == 1)
+                    
+                    if reaccion_real > 0 and tiene_antigenos:
+                        puntos_positivos_explicados += 1
+                    elif reaccion_real == 0 and tiene_antigenos:
+                        penalizaciones_falsos_positivos += 1.5 
+                
+                score_cobertura = puntos_positivos_explicados - penalizaciones_falsos_positivos
+                
+                diff1 = evaluar_dosis_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE)
+                diff2 = evaluar_dosis_mezcla(ant2, ant1, datos, resultados_paciente, COLUMNA_PACIENTE)
+                
+                evaluaciones_mezclas.append({
+                    'pareja': (ant1, ant2),
+                    'score': score_cobertura,
+                    'suma_diffs': diff1 + diff2
+                })
         
         evaluaciones_mezclas = sorted(evaluaciones_mezclas, key=lambda x: (x['score'], x['suma_diffs']), reverse=True)
         
@@ -475,3 +429,4 @@ elif confirmar_mezcla and len(confirmar_mezcla) != 2:
         cumple = (n_pos >= 3) and (n_neg_u >= 3)
         estado = "Cumple" if cumple else "No cumple"
         st.write(f"[{estado}] Anti-{susp}: {n_pos} células reactivas y {n_neg_u} células negativas puras no reactivas.")
+

@@ -5,89 +5,209 @@ import numpy as np
 # ==========================================
 # CONFIGURACIÓN Y CONSTANTES
 # ==========================================
-COLUMNA_PACIENTE = 'AHG'
-COLUMNA_ENZIMA = 'ENZ'
+# Columnas de resultados (del paciente y enzimas si existen)
+COLUMNA_PACIENTE = 'AHG'  
+COLUMNA_ENZIMA = 'ENZ'    
 
+# Lista completa de antígenos del panel
 ANTIGENOS_TODOS = [
-    'D','C','E','c','e','Cw','M','N','S','s','K','k',
-    'Kpa','Kpb','Jsa','Jsb','P1','Lea','Leb','Fya','Fyb',
-    'Jka','Jkb','Lua','Lub','Xga'
+    'D', 'C', 'E', 'c', 'e', 'Cw', 'M', 'N', 'S', 's', 'K', 'k', 
+    'Kpa', 'Kpb', 'Jsa', 'Jsb', 'P1', 'Lea', 'Leb', 'Fya', 'Fyb', 
+    'Jka', 'Jkb', 'Lua', 'Lub', 'Xga'
 ]
 
+# Definición de parejas alélicas para evaluar dosis (Homocigosis vs Heterocigosis)
 PAREJAS_CIGOTICAS = {
-    'C':'c','c':'C','E':'e','e':'E','M':'N','N':'M','S':'s','s':'S',
-    'Fya':'Fyb','Fyb':'Fya','Jka':'Jkb','Jkb':'Jka','K':'k','k':'K',
-    'Kpa':'Kpb','Kpb':'Kpa','Jsa':'Jsb','Jsb':'Jsa','Lea':'Leb','Leb':'Lea',
-    'Lua':'Lub','Lub':'Lua'
+    'C': 'c', 'c': 'C', 'E': 'e', 'e': 'E',
+    'M': 'N', 'N': 'M', 'S': 's', 's': 'S',
+    'Fya': 'Fyb', 'Fyb': 'Fya', 'Jka': 'Jkb', 'Jkb': 'Jka',
+    'K': 'k', 'k': 'K', 'Kpa': 'Kpb', 'Kpb': 'Kpa',
+    'Jsa': 'Jsb', 'Jsb': 'Jsa', 'Lea': 'Leb', 'Leb': 'Lea',
+    'Lua': 'Lub', 'Lub': 'Lua'
 }
 
-ALTA_FRECUENCIA = ['k','Kpb','Jsb','Lub']
-BAJA_FRECUENCIA = ['Cw','Kpa','Jsa','Lua']
-EFECTO_ENZIMAS = {'Fya':'D','Fyb':'D','M':'D','N':'D','S':'D','s':'D','Xga':'D'}
+# Antígenos de alta frecuencia (se excluyen de la búsqueda de coincidencias completas estándar)
+ALTA_FRECUENCIA = ['k', 'Kpb', 'Jsb', 'Lub']
+
+# Antígenos de baja frecuencia (se descartan de las mezclas y búsquedas principales)
+BAJA_FRECUENCIA = ['Cw', 'Kpa', 'Jsa', 'Lua']
+
+# Efecto de las enzimas sobre los antígenos (D = Destruye, S = Sensibiliza/No afecta/Potencia)
+EFECTO_ENZIMAS = {'Fya': 'D', 'Fyb': 'D', 'M': 'D', 'N': 'D', 'S': 'D', 's': 'D', 'Xga': 'D'}
+
 
 # ==========================================
-# FUNCIONES DE EVALUACIÓN
+#         FUNCIONES DE EVALUACIÓN
 # ==========================================
+
 def evaluar_dosis_mezcla(antigeno_evaluado, otro_sospechoso, df, resultados, col_intensidad):
+    """
+    Evalúa si la intensidad de reacción es mayor para homocigotas (dosis doble)
+    que para heterocigotas, aislando el efecto del otro antígeno en la mezcla.
+    Retorna la diferencia de medias (positiva si homocigota > heterocigota).
+    """
     df_aislado = df[df[otro_sospechoso] == 0]
     resultados_aislados = resultados.loc[df_aislado.index]
     intensidades_aisladas = df_aislado.loc[resultados_aislados.index, col_intensidad]
     pareja = PAREJAS_CIGOTICAS.get(antigeno_evaluado)
+    
     diff = 0.0
     if pareja and pareja in df_aislado.columns:
-        mask_homo = (df_aislado[antigeno_evaluado]==1)&(df_aislado[pareja]==0)
+        # Homocigotas del antígeno evaluado: Antígeno=1 Y Pareja=0, y el resultado es positivo.
+        mask_homo = (df_aislado[antigeno_evaluado] == 1) & (df_aislado[pareja] == 0)
         intensidades_homo = intensidades_aisladas[mask_homo]
-        mask_hetero = (df_aislado[antigeno_evaluado]==1)&(df_aislado[pareja]==1)
+        
+        # Heterocigotas: Antígeno=1 Y Pareja=1, y el resultado es positivo.
+        mask_hetero = (df_aislado[antigeno_evaluado] == 1) & (df_aislado[pareja] == 1)
         intensidades_hetero = intensidades_aisladas[mask_hetero]
+        
+        # Calcular diferencia si hay datos de ambos tipos
         if not intensidades_homo.empty and not intensidades_hetero.empty:
             diff = intensidades_homo.mean() - intensidades_hetero.mean()
+            
     return diff
 
+
 def validar_coherencia_dosis(ant1, ant2, df, resultados, col_intensidad):
+    """
+    Verifica si las reacciones del paciente con la mezcla tienen coherencia biológica.
+    Si las intensidades del paciente son planas (todas iguales sin importar si es
+    homocigoto o heterocigoto), la hipótesis de mezcla no es consistente (puede ser Anti-Alta Frecuencia).
+    """
     diff1 = evaluar_dosis_mezcla(ant1, ant2, df, resultados, col_intensidad)
     diff2 = evaluar_dosis_mezcla(ant2, ant1, df, resultados, col_intensidad)
-    casi_plano = abs(diff1)<0.25 and abs(diff2)<0.25
+    
+    # Si las diferencias de dosis para ambos antígenos son extremadamente bajas (cercanas a 0 o negativas)
+    # y las intensidades del paciente son uniformemente reactivas, hay sospecha de anticuerpo único plano.
+    casi_plano = abs(diff1) < 0.25 and abs(diff2) < 0.25
     return not casi_plano
 
+
 def evaluar_alta_frecuencia(df, resultados, col_intensidad):
+    """
+    Busca si el perfil de resultados del paciente coincide con un anticuerpo
+    dirigido contra un antígeno de alta frecuencia de forma única.
+    """
     sospechosos_alta = []
-    celulas_positivas = df[resultados>0]
-    celulas_negativas = df[resultados==0]
+    celulas_positivas = df[resultados > 0]
+    celulas_negativas = df[resultados == 0]
+    
     for ant in ALTA_FRECUENCIA:
         if ant in df.columns:
-            coincide_positivos = (celulas_positivas[ant]==1).all()
+            # 1. Debe estar presente en todas (o casi todas) las células reactivas
+            coincide_positivos = (celulas_positivas[ant] == 1).all()
+            
+            # 2. Si hay células negativas del paciente, el antígeno de alta frecuencia DEBE ser 0 en ellas (homocigosis negativa)
             coincide_negativos = True
             if not celulas_negativas.empty:
-                coincide_negativos = (celulas_negativas[ant]==0).all()
+                coincide_negativos = (celulas_negativas[ant] == 0).all()
+                
             if coincide_positivos and coincide_negativos:
                 sospechosos_alta.append(ant)
+                
     return sospechosos_alta
 
+
 def imprimir_control_unico(antigeno, df, resultados):
+    """
+    Genera el texto simplificado para el control 3+3 de un anticuerpo único.
+    """
+    st.write("\nControl de confirmación 3+3 (Anticuerpo único):")
     pareja = PAREJAS_CIGOTICAS.get(antigeno)
-    resultados_alineados = resultados.loc[df.index]
+    
     if pareja and pareja in df.columns:
-        n_homo_pos = len(df[(df[antigeno]==1)&(df[pareja]==0)&(resultados_alineados>0)])
+        resultados_alineados = resultados.loc[df.index]
+        n_homo_pos = len(df[(df[antigeno] == 1) & (df[pareja] == 0) & (resultados_alineados > 0)])
     else:
-        n_homo_pos = len(df[(df[antigeno]==1)&(resultados_alineados>0)])
-    n_neg_no_reactivas = len(df[(df[antigeno]==0)&(resultados_alineados==0)])
-    cumple = (n_homo_pos>=3) and (n_neg_no_reactivas>=3)
+        resultados_alineados = resultados.loc[df.index]
+        n_homo_pos = len(df[(df[antigeno] == 1) & (resultados_alineados > 0)])
+        
+    n_neg_no_reactivas = len(df[(df[antigeno] == 0) & (resultados_alineados == 0)])
+    
+    cumple = (n_homo_pos >= 3) and (n_neg_no_reactivas >= 3)
     estado = "Cumple" if cumple else "No cumple"
-    return f"[{estado}] Anti-{antigeno}: {n_homo_pos} células reactivas homocigotas y {n_neg_no_reactivas} negativas no reactivas."
+    
+    st.write(f"[{estado}] Anti-{antigeno}: {n_homo_pos} células reactivas homocigotas (dosis doble) y {n_neg_no_reactivas} células negativas no reactivas.")
+
 
 def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, col_enz, usar_enz):
-    salida = []
+    """
+    Genera el control 3+3 adaptativo para mezclas. 
+    Si uno se destruye y el otro se mantiene/potencia:
+    - El resistente se confirma en la fase ENZ.
+    - El destruido se confirma estrictamente en la fase basal (AHG) aislando al resistente.
+    """
+    st.write("\nControl de confirmación 3+3 (Mezcla de anticuerpos):")
+    
     destruido_1 = EFECTO_ENZIMAS.get(antig_1) == 'D'
     destruido_2 = EFECTO_ENZIMAS.get(antig_2) == 'D'
+    
+    # Caso: Uno se destruye y el otro resiste (con columna ENZ disponible)
     if usar_enz and (destruido_1 != destruido_2):
         if destruido_1:
             destruido, resistente = antig_1, antig_2
         else:
             destruido, resistente = antig_2, antig_1
-        salida.append(f"[Mezcla con enzimas] Anti-{resistente} confirmado en ENZ, Anti-{destruido} confirmado en AHG")
+            
+        pareja_res = PAREJAS_CIGOTICAS.get(resistente)
+        pareja_dest = PAREJAS_CIGOTICAS.get(destruido)
+        
+        # --- 1. EVALUAR EL RESISTENTE EN ENZIMAS ---
+        if pareja_res and pareja_res in df.columns:
+            n_pos_res = len(df[(df[resistente] == 1) & (df[pareja_res] == 0) & (df[col_enz] > 0)])
+        else:
+            n_pos_res = len(df[(df[resistente] == 1) & (df[col_enz] > 0)])
+            
+        n_neg_res = len(df[(df[resistente] == 0) & (df[col_enz] == 0)])
+        
+        cumple_res = (n_pos_res >= 3) and (n_neg_res >= 3)
+        est_res = "Cumple" if cumple_res else "No cumple"
+        
+        # --- 2. EVALUAR EL DESTRUIDO EN FASE BASAL (AHG) ---
+        df_puro_dest = df[df[resistente] == 0]
+        
+        if pareja_dest and pareja_dest in df_puro_dest.columns:
+            n_pos_dest = len(df_puro_dest[(df_puro_dest[destruido] == 1) & (df_puro_dest[pareja_dest] == 0) & (df_puro_dest[col_ahg] > 0)])
+        else:
+            n_pos_dest = len(df_puro_dest[(df_puro_dest[destruido] == 1) & (df_puro_dest[col_ahg] > 0)])
+            
+        n_neg_dest = len(df[(df[destruido] == 0) & (df[resistente] == 0) & (resultados_paciente == 0)])
+        
+        cumple_dest = (n_pos_dest >= 3) and (n_neg_dest >= 3)
+        est_dest = "Cumple" if cumple_dest else "No cumple"
+        
+        st.write(f"[{est_res}] Anti-{resistente} (Evaluado en ENZ): {n_pos_res} células reactivas homocigotas y {n_neg_res} células negativas no reactivas.")
+        st.write(f"[{est_dest}] Anti-{destruido} (Evaluado en AHG puro): {n_pos_dest} células reactivas homocigotas puras y {n_neg_dest} células negativas puras no reactivas.")
+
     else:
-        salida.append(f"[Mezcla tradicional] Anti-{antig_1} + Anti-{antig_2}")
-    return salida
+        # --- MODO TRADICIONAL (Si ambos resisten, se destruyen o no hay datos enzimáticos) ---
+        pareja_1 = PAREJAS_CIGOTICAS.get(antig_1)
+        df_puro_1 = df[df[antig_2] == 0]
+        
+        if pareja_1 and pareja_1 in df_puro_1.columns:
+            n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[pareja_1] == 0) & (df_puro_1[col_ahg] > 0)])
+        else:
+            n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[col_ahg] > 0)])
+            
+        n_neg_no_reactivas_1 = len(df[(df[antig_1] == 0) & (df[antig_2] == 0) & (resultados_paciente == 0)])
+        cumple_1 = (n_homo_pos_1 >= 3) and (n_neg_no_reactivas_1 >= 3)
+        estado_1 = "Cumple" if cumple_1 else "No cumple"
+        
+        pareja_2 = PAREJAS_CIGOTICAS.get(antig_2)
+        df_puro_2 = df[df[antig_1] == 0]
+        
+        if pareja_2 and pareja_2 in df_puro_2.columns:
+           n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[pareja_2] == 0) & (df_puro_2[col_ahg] > 0)])
+        else:
+            n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[col_ahg] > 0)])
+            
+        n_neg_no_reactivas_2 = len(df[(df[antig_2] == 0) & (df[antig_1] == 0) & (resultados_paciente == 0)])
+        cumple_2 = (n_homo_pos_2 >= 3) and (n_neg_no_reactivas_2 >= 3)
+        estado_2 = "Cumple" if cumple_2 else "No cumple"
+        
+        st.write(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
+        st.write(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
+
 
 # ==========================================
 # INTERFAZ STREAMLIT

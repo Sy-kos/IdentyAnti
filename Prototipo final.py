@@ -94,7 +94,6 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 # ==========================================
 st.title("Identificación de Anticuerpos Irregulares 🧪")
 
-archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
 opcion = st.radio("¿Qué quieres subir?", ["CSV", "Imagen"])
 
 if opcion == "CSV":

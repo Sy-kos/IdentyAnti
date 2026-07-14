@@ -96,14 +96,7 @@ st.title("Identificación de Anticuerpos Irregulares 🧪")
 
 opcion = st.radio("¿Qué quieres subir?", ["CSV", "Imagen"])
 
-if opcion == "CSV":
-    archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
-    if archivo is not None:
-        datos = pd.read_csv(archivo, delimiter=";")
-        st.subheader("Vista previa de datos")
-        st.dataframe(datos.head())
-
-elif opcion == "Imagen":
+if opcion == "Imagen":
     st.warning("Todavía no se con imagen, se hace lo que se puede.")
     imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
     if imagen is not None:
@@ -111,8 +104,13 @@ elif opcion == "Imagen":
         # datos = convertir_imagen_a_dataframe(imagen)
         st.info("Todavía mi cerebro no da para poner con imagen, sabrá dios cómo logré lo que hay, amén. Calmate por deoooos, siempre puedes modificar el csv manual, no seas floj@")
 
+elif opcion == "CSV":
+    archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
+if archivo is not None:
+    datos = pd.read_csv(archivo, delimiter=";")
+    st.subheader("Vista previa de datos")
+    st.dataframe(datos.head())
 
-if 'datos' in locals():
     # Limpieza
     columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
     datos = datos.dropna(subset=columnas_criticas, how='all')
@@ -137,36 +135,25 @@ if 'datos' in locals():
     controles = []
 
     # Filtro de descarte
-# Filtro de descarte
-antigenos_descartados = set()
-celulas_negativas = datos[resultados_paciente == 0]
-
-for ant in ANTIGENOS_TODOS:
-    if ant in datos.columns and ant not in BAJA_FRECUENCIA:
-        pareja = PAREJAS_CIGOTICAS.get(ant)
-        if pareja and pareja in datos.columns:
-            # Descarte solo si es homocigoto (ant=1, pareja=0) en células negativas
-            celulas_homo_neg = datos[(datos[ant]==1) & (datos[pareja]==0) & (resultados_paciente==0)]
-            if not celulas_homo_neg.empty:
-                antigenos_descartados.add(ant)
-        else:
-            # Si no tiene pareja, descarta igual si aparece en negativos
+    antigenos_descartados = set()
+    celulas_negativas = datos[resultados_paciente == 0]
+    for ant in ANTIGENOS_TODOS:
+        if ant in datos.columns and ant not in BAJA_FRECUENCIA:
             if (celulas_negativas[ant] == 1).any():
                 antigenos_descartados.add(ant)
 
-# 👇 Aquí ya fuera del for
-candidatos_no_descartados = [
-    ant for ant in ANTIGENOS_TODOS
-    if ant in datos.columns and ant not in antigenos_descartados
-    and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
-]
+    candidatos_no_descartados = [
+        ant for ant in ANTIGENOS_TODOS
+        if ant in datos.columns and ant not in antigenos_descartados
+        and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
+    ]
 
-# Paso 1: único anticuerpo
-coincidencias_completas = []
-celulas_positivas = datos[resultados_paciente > 0]
-for ant in candidatos_no_descartados:
-    if (celulas_positivas[ant] == 1).all():
-        coincidencias_completas.append(ant)
+    # Paso 1: único anticuerpo
+    coincidencias_completas = []
+    celulas_positivas = datos[resultados_paciente > 0]
+    for ant in candidatos_no_descartados:
+        if (celulas_positivas[ant] == 1).all():
+            coincidencias_completas.append(ant)
 
     if len(coincidencias_completas) == 1:
         antig_confirmar_u = coincidencias_completas[0]

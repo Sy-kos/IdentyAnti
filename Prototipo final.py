@@ -196,6 +196,12 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 # ==========================================
 st.title("Identificación de Anticuerpos Irregulares 🧪")
 
+antig_confirmar_u = None
+confirmar_mezcla = None
+conclusion = None
+controles = []
+
+
 archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
 
 if archivo is not None:
@@ -335,7 +341,7 @@ if archivo is not None:
  # ============================
  # VALIDACIÓN DE MEZCLA
  # ============================
- if confirmar_mezcla and len(confirmar_mezcla) == 2 and not antig_confirmar_u:
+ if confirmar_mezcla is not None and len(confirmar_mezcla) == 2 and antig_confirmar_u is None:
     m1, m2 = confirmar_mezcla
     mezcla_es_coherente = validar_coherencia_dosis(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE)
     if mezcla_es_coherente:

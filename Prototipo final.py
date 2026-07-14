@@ -63,8 +63,11 @@ if archivo is not None:
 
     resultados_paciente = datos[COLUMNA_PACIENTE]
     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+    
+else:
+    st.info("Por favor, sube un archivo CSV para iniciar el análisis. Ignora ese error feo de abajo, después lo arreglo.")
 
-    # ==========================================================
+# ==========================================================
 # PATRÓN ENZIMÁTICO PARA ANTICUERPO ÚNICO
 # ==========================================================
 antigeno_unico_enz = None
@@ -102,8 +105,6 @@ if usar_enzimas:
         antig_confirmar_u = antigeno_unico_enz
         st.success(f"Resultado prioritario (patrón ENZ): Anti-{antigeno_unico_enz}")
 
-else:
-    st.info("Por favor, sube un archivo CSV para iniciar el análisis. Ignora ese error feo de abajo, después lo arreglo.")
 
 # ==========================================
 #         FUNCIONES DE EVALUACIÓN

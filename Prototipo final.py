@@ -129,7 +129,10 @@ resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
     # ============================
     # EJECUCIÓN DE LA LÓGICA CLÍNICA
     # ============================
-
+     antig_confirmar_u = None
+     confirmar_mezcla = None
+     conclusion = None
+     controles = []
     # Filtro de descarte
     antigenos_descartados = set()
     celulas_negativas = datos[resultados_paciente == 0]

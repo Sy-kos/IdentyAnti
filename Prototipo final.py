@@ -214,7 +214,7 @@ if archivo is not None:
 
         if evaluaciones_mezclas and evaluaciones_mezclas[0]['score'] > 0:
             confirmar_mezcla = evaluaciones_mezclas[0]['pareja']
-                else:
+        else:
             # Resguardo: intentar un candidato único
             candidatos_validos_unicos = [
                 ant for ant in candidatos_no_descartados

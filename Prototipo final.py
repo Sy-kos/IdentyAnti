@@ -106,16 +106,9 @@ if opcion == "CSV":
 elif opcion == "Imagen":
     imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
     if imagen is not None:
-        # Aquí llamas a la IA de visión (Azure Computer Vision o EasyOCR)
-        # y conviertes la tabla detectada en un DataFrame
         datos = convertir_imagen_a_dataframe(imagen)
         st.subheader("Vista previa de datos generados desde imagen")
         st.dataframe(datos.head())
-
-if archivo is not None:
-    datos = pd.read_csv(archivo, delimiter=";")
-    st.subheader("Vista previa de datos")
-    st.dataframe(datos.head())
 
     # Limpieza
     columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]

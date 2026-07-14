@@ -191,32 +191,6 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 
     return salida
 
-    # --- MODO TRADICIONAL (Si ambos resisten, se destruyen o no hay datos enzimáticos) ---
-    pareja_1 = PAREJAS_CIGOTICAS.get(antig_1)
-    df_puro_1 = df[df[antig_2] == 0]
-
-    if pareja_1 and pareja_1 in df_puro_1.columns:
-        n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[pareja_1] == 0) & (df_puro_1[col_ahg] > 0)])
-    else:
-        n_homo_pos_1 = len(df_puro_1[(df_puro_1[antig_1] == 1) & (df_puro_1[col_ahg] > 0)])
-
-    n_neg_no_reactivas_1 = len(df[(df[antig_1] == 0) & (df[antig_2] == 0) & (resultados_paciente == 0)])
-    estado_1 = "Cumple" if (n_homo_pos_1 >= 3 and n_neg_no_reactivas_1 >= 3) else "No cumple"
-
-    pareja_2 = PAREJAS_CIGOTICAS.get(antig_2)
-    df_puro_2 = df[df[antig_1] == 0]
-
-    if pareja_2 and pareja_2 in df_puro_2.columns:
-        n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[pareja_2] == 0) & (df_puro_2[col_ahg] > 0)])
-    else:
-        n_homo_pos_2 = len(df_puro_2[(df_puro_2[antig_2] == 1) & (df_puro_2[col_ahg] > 0)])
-
-    n_neg_no_reactivas_2 = len(df[(df[antig_2] == 0) & (df[antig_1] == 0) & (resultados_paciente == 0)])
-    estado_2 = "Cumple" if (n_homo_pos_2 >= 3 and n_neg_no_reactivas_2 >= 3) else "No cumple"
-
-    salida.append(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
-    salida.append(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
-
 # ==========================================
 # INTERFAZ STREAMLIT
 # ==========================================

@@ -240,9 +240,6 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 #             EJECUCIÓN DEL ANÁLISIS
 # ==========================================
 
-# 1. Cargar el archivo
-datos = pd.read_csv(RUTA_ARCHIVO, delimiter=';')
-
 # --- LIMPIEZA: Eliminar filas vacías y basura del CSV ---
 columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]
 datos = datos.dropna(subset=columnas_criticas, how='all')

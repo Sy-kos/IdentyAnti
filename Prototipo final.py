@@ -326,9 +326,16 @@ coincidencias_completas = []
 celulas_positivas = datos[resultados_paciente > 0]
 
 for ant in candidatos_no_descartados:
-    # Para ser considerado culpable único, debe estar presente en TODAS las células reactivas
+    pareja = PAREJAS_CIGOTICAS.get(ant)
     if (celulas_positivas[ant] == 1).all():
+        # Verificar que no esté en homocigosis negativa dentro de positivos
+        if pareja and pareja in celulas_positivas.columns:
+            mask_homo_pos = (celulas_positivas[ant] == 1) & (celulas_positivas[pareja] == 0)
+            if mask_homo_pos.any():
+                # Si aparece en dosis doble en positivos, se descarta
+                continue
         coincidencias_completas.append(ant)
+
 
 # Si hay exactamente un antígeno que sobrevivió al filtro y cubre los positivos, nos quedamos con él
 if len(coincidencias_completas) == 1:
@@ -366,36 +373,45 @@ if usar_enzimas:
         fallar_a_modo_basal = True
 
     
-        # --- MODO BASAL ESTÁNDAR (Puntuación probabilística sobre los candidatos restantes) ---
-        evaluaciones_mezclas = []
+# --- MODO BASAL ESTÁNDAR (Puntuación probabilística sobre los candidatos restantes) ---
+evaluaciones_mezclas = []
+
+for i in range(len(candidatos_no_descartados)):
+    for j in range(i+1, len(candidatos_no_descartados)):
+        ant1 = candidatos_no_descartados[i]
+        ant2 = candidatos_no_descartados[j]
         
-        for i in range(len(candidatos_no_descartados)):
-            for j in range(i+1, len(candidatos_no_descartados)):
-                ant1 = candidatos_no_descartados[i]
-                ant2 = candidatos_no_descartados[j]
-                
-                puntos_positivos_explicados = 0
-                penalizaciones_falsos_positivos = 0
-                
-                for idx, fila in datos.iterrows():
-                    reaccion_real = fila[COLUMNA_PACIENTE]
-                    tiene_antigenos = (fila[ant1] == 1 or fila[ant2] == 1)
-                    
-                    if reaccion_real > 0 and tiene_antigenos:
-                        puntos_positivos_explicados += 1
-                    elif reaccion_real == 0 and tiene_antigenos:
-                        penalizaciones_falsos_positivos += 1.5 
-                
-                score_cobertura = puntos_positivos_explicados - penalizaciones_falsos_positivos
-                
-                diff1 = evaluar_dosis_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE)
-                diff2 = evaluar_dosis_mezcla(ant2, ant1, datos, resultados_paciente, COLUMNA_PACIENTE)
-                
-                evaluaciones_mezclas.append({
-                    'pareja': (ant1, ant2),
-                    'score': score_cobertura,
-                    'suma_diffs': diff1 + diff2
-                })
+        puntos_positivos_explicados = 0
+        penalizaciones_falsos_positivos = 0
+        
+        for idx, fila in datos.iterrows():
+            reaccion_real = fila[COLUMNA_PACIENTE]
+            tiene_antigenos = (fila[ant1] == 1 or fila[ant2] == 1)
+            
+            if reaccion_real > 0 and tiene_antigenos:
+                puntos_positivos_explicados += 1
+            elif reaccion_real == 0 and tiene_antigenos:
+                penalizaciones_falsos_positivos += 1.5 
+        
+        # 🔧 Ajuste: penalizar si alguno aparece en homocigosis positiva
+        for ant in [ant1, ant2]:
+            pareja = PAREJAS_CIGOTICAS.get(ant)
+            if pareja and pareja in datos.columns:
+                mask_homo_pos = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_paciente > 0)
+                if mask_homo_pos.any():
+                    penalizaciones_falsos_positivos += 5  # penalización fuerte
+        
+        score_cobertura = puntos_positivos_explicados - penalizaciones_falsos_positivos
+        
+        diff1 = evaluar_dosis_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE)
+        diff2 = evaluar_dosis_mezcla(ant2, ant1, datos, resultados_paciente, COLUMNA_PACIENTE)
+        
+        evaluaciones_mezclas.append({
+            'pareja': (ant1, ant2),
+            'score': score_cobertura,
+            'suma_diffs': diff1 + diff2
+        })
+
         
         evaluaciones_mezclas = sorted(evaluaciones_mezclas, key=lambda x: (x['score'], x['suma_diffs']), reverse=True)
         

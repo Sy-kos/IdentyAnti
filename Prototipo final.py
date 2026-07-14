@@ -48,6 +48,7 @@ if archivo is not None:
     st.subheader("Vista previa de datos")
     st.dataframe(datos.head())
 
+    
     # Limpieza
     columnas_criticas = [col for col in ANTIGENOS_TODOS+[COLUMNA_PACIENTE] if col in datos.columns]
     datos = datos.dropna(subset=columnas_criticas, how='all')
@@ -62,6 +63,45 @@ if archivo is not None:
 
     resultados_paciente = datos[COLUMNA_PACIENTE]
     resultados_enzima = datos[COLUMNA_ENZIMA] if usar_enzimas else None
+
+    # ==========================================================
+# PATRÓN ENZIMÁTICO PARA ANTICUERPO ÚNICO
+# ==========================================================
+antigeno_unico_enz = None
+
+if usar_enzimas:
+    for ant in candidatos_no_descartados:
+        efecto = EFECTO_ENZIMAS.get(ant, 'S')  # por defecto resistente/potenciado
+        pareja = PAREJAS_CIGOTICAS.get(ant)
+
+        # Células homocigotas para este antígeno
+        if pareja and pareja in datos.columns:
+            celulas_homo = datos[(datos[ant] == 1) & (datos[pareja] == 0)]
+        else:
+            celulas_homo = datos[datos[ant] == 1]
+
+        if celulas_homo.empty:
+            continue
+
+        # Revisar patrón según efecto enzimático
+        if efecto == 'D':
+            # Debe destruirse en homocigotos: AHG positivo y ENZ negativo
+            mask = (celulas_homo[COLUMNA_PACIENTE] > 0) & (celulas_homo[COLUMNA_ENZIMA] == 0)
+            if mask.all():
+                antigeno_unico_enz = ant
+                break
+
+        elif efecto == 'S':
+            # Debe mantenerse o potenciarse en homocigotos: AHG positivo y ENZ positivo
+            mask = (celulas_homo[COLUMNA_PACIENTE] > 0) & (celulas_homo[COLUMNA_ENZIMA] > 0)
+            if mask.all():
+                antigeno_unico_enz = ant
+                break
+
+    if antigeno_unico_enz:
+        antig_confirmar_u = antigeno_unico_enz
+        st.success(f"Resultado prioritario (patrón ENZ): Anti-{antigeno_unico_enz}")
+
 else:
     st.info("Por favor, sube un archivo CSV para iniciar el análisis. Ignora ese error feo de abajo, después lo arreglo.")
 

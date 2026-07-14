@@ -335,7 +335,7 @@ if archivo is not None:
 # ============================
 # VALIDACIÓN DE MEZCLA
 # ============================
-if confirmar_mezcla and len(confirmar_mezcla) == 2 and not antig_confirmar
+if confirmar_mezcla and len(confirmar_mezcla) == 2 and not antig_confirmar:
     m1, m2 = confirmar_mezcla
     mezcla_es_coherente = validar_coherencia_dosis(m1, m2, datos, resultados_paciente, COLUMNA_PACIENTE)
     if mezcla_es_coherente:

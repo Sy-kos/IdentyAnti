@@ -288,31 +288,35 @@ confirmar_mezcla = None
 # NUEVA LÓGICA CLÍNICA: FILTRO DE DESCARTE POR NEGATIVOS
 # ==========================================================
 
-# 1. Identificar antígenos descartados (Presentes en células donde AHG == 0)
-# Se excluyen de este descarte automático estricto a los de baja frecuencia
 antigenos_descartados = set()
 
+# Descarte explícito para todos los pares antitéticos
 for ant, pareja in PAREJAS_CIGOTICAS.items():
     if ant in datos.columns and pareja in datos.columns and ant not in BAJA_FRECUENCIA:
-        # Caso homocigoto negativo: antígeno=1, pareja=0, reacción=0
         mask_homo_neg = (datos[ant] == 1) & (datos[pareja] == 0) & (resultados_paciente == 0)
         if mask_homo_neg.any():
             antigenos_descartados.add(ant)
 
-# También aplica el descarte general para antígenos sin pareja definida
+# Descarte general para antígenos sin pareja definida
 for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA and ant not in PAREJAS_CIGOTICAS:
         mask_general_neg = (datos[ant] == 1) & (resultados_paciente == 0)
         if mask_general_neg.any():
             antigenos_descartados.add(ant)
 
-st.write("Antígenos descartados:", antigenos_descartados)
+# 👀 Verificación en pantalla
+st.write("Antígenos descartados por negativos:", antigenos_descartados)
 
 # 2. Identificar candidatos viables (Los que NO fueron descartados)
 candidatos_no_descartados = [
     ant for ant in ANTIGENOS_TODOS 
-    if ant in datos.columns and ant not in antigenos_descartados and ant not in ALTA_FRECUENCIA and ant not in BAJA_FRECUENCIA
+    if ant in datos.columns 
+    and ant not in antigenos_descartados 
+    and ant not in ALTA_FRECUENCIA 
+    and ant not in BAJA_FRECUENCIA
 ]
+
+st.write("Candidatos viables:", candidatos_no_descartados)
 
 # --- PASO 1: EVALUAR SI UN ÚNICO ANTICUERPO EXPLICA TODOS LOS POSITIVOS ---
 coincidencias_completas = []

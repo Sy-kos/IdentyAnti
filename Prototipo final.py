@@ -191,7 +191,7 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 
     return salida
 
-else:
+ else:
     # --- MODO TRADICIONAL (Si ambos resisten, se destruyen o no hay datos enzimáticos) ---
     pareja_1 = PAREJAS_CIGOTICAS.get(antig_1)
     df_puro_1 = df[df[antig_2] == 0]

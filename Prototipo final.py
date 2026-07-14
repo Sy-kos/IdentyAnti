@@ -279,9 +279,16 @@ celulas_negativas = datos[resultados_paciente == 0]
 
 for ant in ANTIGENOS_TODOS:
     if ant in datos.columns and ant not in BAJA_FRECUENCIA:
-        # Si el antígeno está presente (1) en una célula donde la reacción real es 0, se descarta
-        if (celulas_negativas[ant] == 1).any():
-            antigenos_descartados.add(ant)
+        pareja = PAREJAS_CIGOTICAS.get(ant)
+        if pareja and pareja in datos.columns:
+            # Caso homocigoto negativo: antígeno=1, pareja=0, reacción=0
+            mask_homo_neg = (celulas_negativas[ant] == 1) & (celulas_negativas[pareja] == 0)
+            if mask_homo_neg.any():
+                antigenos_descartados.add(ant)
+        else:
+            # Caso general: cualquier presencia en células negativas
+            if (celulas_negativas[ant] == 1).any():
+                antigenos_descartados.add(ant)
 
 # 2. Identificar candidatos viables (Los que NO fueron descartados)
 candidatos_no_descartados = [

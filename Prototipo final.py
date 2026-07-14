@@ -237,9 +237,9 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
         st.write(f"[{estado_1}] Anti-{antig_1}: {n_homo_pos_1} células reactivas homocigotas puras y {n_neg_no_reactivas_1} células negativas puras no reactivas.")
         st.write(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
 
-# ==========================================
-#             EJECUCIÓN DEL ANÁLISIS
-# ==========================================
+ # ==========================================
+ #             EJECUCIÓN DEL ANÁLISIS
+ # ==========================================
  
  # --- LIMPIEZA: Eliminar filas vacías y basura del CSV ---
 columnas_criticas = [col for col in ANTIGENOS_TODOS + [COLUMNA_PACIENTE] if col in datos.columns]

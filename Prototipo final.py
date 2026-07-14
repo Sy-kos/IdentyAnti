@@ -190,6 +190,61 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
         salida.append(f"[{estado_2}] Anti-{antig_2}: {n_homo_pos_2} células reactivas homocigotas puras y {n_neg_no_reactivas_2} células negativas puras no reactivas.")
 
     return salida
+       # Si no hay sospechosos claros, pasamos a evaluar alta frecuencia
+    sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+    if sospechosos_alta:
+        antig_confirmar_u = sospechosos_alta[0]
+        conclusion = f"[Advertencia antígeno de alta frecuencia] Anti-{antig_confirmar_u}"
+    else:
+        # --- MODO BASAL ESTÁNDAR ---
+        evaluaciones_mezclas = []
+        for i in range(len(candidatos_no_descartados)):
+            for j in range(i+1, len(candidatos_no_descartados)):
+                ant1 = candidatos_no_descartados[i]
+                ant2 = candidatos_no_descartados[j]
+
+                puntos_positivos_explicados = 0
+                penalizaciones_falsos_positivos = 0
+
+                for idx, fila in datos.iterrows():
+                    reaccion_real = fila[COLUMNA_PACIENTE]
+                    tiene_antigenos = (fila[ant1] == 1 or fila[ant2] == 1)
+                    if reaccion_real > 0 and tiene_antigenos:
+                        puntos_positivos_explicados += 1
+                    elif reaccion_real == 0 and tiene_antigenos:
+                        penalizaciones_falsos_positivos += 1.5
+
+                score_cobertura = puntos_positivos_explicados - penalizaciones_falsos_positivos
+                diff1 = evaluar_dosis_mezcla(ant1, ant2, datos, resultados_paciente, COLUMNA_PACIENTE)
+                diff2 = evaluar_dosis_mezcla(ant2, ant1, datos, resultados_paciente, COLUMNA_PACIENTE)
+
+                evaluaciones_mezclas.append({
+                    'pareja': (ant1, ant2),
+                    'score': score_cobertura,
+                    'suma_diffs': diff1 + diff2
+                })
+
+        evaluaciones_mezclas = sorted(evaluaciones_mezclas, key=lambda x: (x['score'], x['suma_diffs']), reverse=True)
+
+        if evaluaciones_mezclas and evaluaciones_mezclas[0]['score'] > 0:
+            confirmar_mezcla = evaluaciones_mezclas[0]['pareja']
+        else:
+            # Resguardo: intentar un candidato único
+            candidatos_validos_unicos = [
+                ant for ant in candidatos_no_descartados
+                if (celulas_positivas[ant] == 1).all()
+            ]
+            if candidatos_validos_unicos:
+                antig_confirmar_u = candidatos_validos_unicos[0]
+                conclusion = f"Resultado: Anti-{antig_confirmar_u}"
+            else:
+                sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
+                if sospechosos_alta:
+                    antig_confirmar_u = sospechosos_alta[0]
+                    conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
+                else:
+                    conclusion = "Resultado: No se pudo determinar un anticuerpo o mezcla probable."
+ 
 
 # ==========================================
 # INTERFAZ STREAMLIT

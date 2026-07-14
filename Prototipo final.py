@@ -94,14 +94,8 @@ def imprimir_control_mezcla(antig_1, antig_2, df, resultados_paciente, col_ahg, 
 # ==========================================
 st.title("Identificación de Anticuerpos Irregulares 🧪")
 
-opcion = st.radio("¿Qué quieres subir?", ["CSV", "Imagen"])
+archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
 
-if opcion == "Imagen":
-    st.warning("Todavía no se con imagen, se hace lo que se puede.")
-    imagen = st.file_uploader("Sube una imagen del panel", type=["png","jpg","jpeg"])
-
-elif opcion == "CSV":
-    archivo = st.file_uploader("Sube tu archivo CSV de panel", type=["csv"])
 if archivo is not None:
     datos = pd.read_csv(archivo, delimiter=";")
     st.subheader("Vista previa de datos")

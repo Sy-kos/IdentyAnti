@@ -180,7 +180,7 @@ if archivo is not None:
     sospechosos_alta = evaluar_alta_frecuencia(datos, resultados_paciente, COLUMNA_PACIENTE)
     if sospechosos_alta:
         antig_confirmar_u = sospechosos_alta[0]
-        conclusion = f"[SOPORTE ALTA FRECUENCIA] Anti-{antig_confirmar_u}"
+        conclusion = f"[Advertencia antígeno de alta frecuencia] Anti-{antig_confirmar_u}"
     else:
         # --- MODO BASAL ESTÁNDAR ---
         evaluaciones_mezclas = []

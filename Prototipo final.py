@@ -303,39 +303,37 @@ if len(coincidencias_completas) == 1:
     antig_confirmar_u = coincidencias_completas[0]
     st.success(f"Resultado: Anti-{antig_confirmar_u}")
 
-else:
-    # --- PASO 2: SI NO HAY ÚNICO, INICIAR BÚSQUEDA DE MEZCLAS ---
-    fallar_a_modo_basal = False
+    # --- PASO 2: PRIORIZAR ENZIMAS SI EXISTEN ---
+if usar_enzimas:
+    st.info("Se detectó columna ENZ, priorizando confirmación enzimática...")
+
+    celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
+    sospechosos_destruidos = []
+    if not celulas_negativizadas.empty:
+        for ant in candidatos_no_descartados:
+            if EFECTO_ENZIMAS.get(ant) == 'D' and (celulas_negativizadas[ant] == 1).all():
+                sospechosos_destruidos.append(ant)
+
+    celulas_positivas_enz = datos[resultados_enzima > 0]
+    sospechosos_resistentes = []
+    if not celulas_positivas_enz.empty:
+        for ant in candidatos_no_descartados:
+            if EFECTO_ENZIMAS.get(ant) != 'D' and (celulas_positivas_enz[ant] == 1).all():
+                sospechosos_resistentes.append(ant)
+
+    total_sospechosos = sospechosos_destruidos + sospechosos_resistentes
+
+    if len(total_sospechosos) == 1:
+        antig_confirmar_u = total_sospechosos[0]
+        st.success(f"Resultado prioritario (ENZ): Anti-{antig_confirmar_u}")
+    elif len(total_sospechosos) > 1:
+        confirmar_mezcla = total_sospechosos
+        st.success(f"Resultado prioritario (ENZ): Mezcla {confirmar_mezcla}")
+    else:
+        # Si no hay evidencia clara en ENZ, recién pasar a modo basal
+        fallar_a_modo_basal = True
+
     
-    if usar_enzimas:
-        # --- MODO ENZIMAS (Mezclas asistidas por enzimas sobre los no descartados) ---
-        celulas_negativizadas = datos[(resultados_paciente > 0) & (resultados_enzima == 0)]
-        sospechosos_destruidos = []
-        
-        if not celulas_negativizadas.empty:
-            for ant in candidatos_no_descartados:
-                if EFECTO_ENZIMAS.get(ant) == 'D' and (celulas_negativizadas[ant] == 1).all():
-                    sospechosos_destruidos.append(ant)
-                        
-        celulas_positivas_enz = datos[resultados_enzima > 0]
-        sospechosos_resistentes = []
-        if not celulas_positivas_enz.empty:
-            for ant in candidatos_no_descartados:
-                if EFECTO_ENZIMAS.get(ant) != 'D' and (celulas_positivas_enz[ant] == 1).all():
-                    sospechosos_resistentes.append(ant)
-
-        total_sospechosos = sospechosos_destruidos + sospechosos_resistentes
-        
-        if len(total_sospechosos) == 0:
-            fallar_a_modo_basal = True
-        elif len(total_sospechosos) == 1:
-            antig_confirmar_u = total_sospechosos[0]
-            st.success(f"Resultado: Anti-{antig_confirmar_u}")
-        else:
-            confirmar_mezcla = total_sospechosos
-            # No imprimimos inmediatamente; validaremos la dosis en la sección posterior de impresión
-
-    if not usar_enzimas or fallar_a_modo_basal:
         # --- MODO BASAL ESTÁNDAR (Puntuación probabilística sobre los candidatos restantes) ---
         evaluaciones_mezclas = []
         
@@ -429,4 +427,3 @@ elif confirmar_mezcla and len(confirmar_mezcla) != 2:
         cumple = (n_pos >= 3) and (n_neg_u >= 3)
         estado = "Cumple" if cumple else "No cumple"
         st.write(f"[{estado}] Anti-{susp}: {n_pos} células reactivas y {n_neg_u} células negativas puras no reactivas.")
-
